@@ -6,8 +6,8 @@ export async function onRequest(context) {
   try {
     const { notas } = await context.request.json();
     
-    // Mudamos para a versão estável 'v1' e o modelo 'gemini-1.5-flash'
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${chave}`;
+    // Usando 'gemini-1.5-flash-latest' que é o codinome mais aceito na v1
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${chave}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -15,8 +15,8 @@ export async function onRequest(context) {
       body: JSON.stringify({
         contents: [{ 
           parts: [{ 
-            text: `Aja como um assistente acadêmico editorial para psicanalistas. 
-            Sua tarefa é organizar notas de estudo em uma estrutura narrativa para uma aula ou palestra, sugerindo conexões teóricas. 
+            text: `Contexto: Assistente para psicanalistas. 
+            Objetivo: Transformar notas em roteiro de aula/palestra acadêmica. 
             Notas: ${notas}` 
           }] 
         }]
@@ -25,9 +25,8 @@ export async function onRequest(context) {
 
     const data = await res.json();
 
-    // Se o Google ainda der erro, aqui pegaremos a mensagem nova
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Erro Google: " + data.error.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Erro Detalhado: " + data.error.message }), { status: 500 });
     }
 
     const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro na geração";
@@ -36,6 +35,6 @@ export async function onRequest(context) {
       headers: { "Content-Type": "application/json" }
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Erro Script: " + e.message }), { status: 500 });
   }
 }
