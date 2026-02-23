@@ -78,6 +78,7 @@ const gerarSugestaoSomada = async () => {
     }
   };
 
+
   try {
     // DISPARO EM PARALELO: 
     // O Claude é disparado primeiro. Não usamos 'await' na frente do processarResposta
@@ -189,7 +190,7 @@ const gerarSugestaoSomada = async () => {
           <div className={`area-texto ${iaCarregando ? "ia-ativa" : ""}`}>
           {podeMostrarBalao && (
   <div className="balao-ia" onClick={gerarSugestaoSomada}>
-    💡 Deseja uma sugestão baseada nas suas notas?
+    💡 Deseja uma analise sugestão baseada nas suas notas?
   </div>
 )}
 
