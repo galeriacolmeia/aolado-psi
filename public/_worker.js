@@ -1,19 +1,12 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname.replace(/\/$/, ""); // Remove barra no final se existir
+    
+    // Log para você ver o que o Worker está recebendo (olhe no painel do Cloudflare depois)
+    console.log("Recebendo requisição para:", url.pathname);
 
-    // ROTA DE TESTE (Mantenha para sabermos se as chaves sumiram)
-    if (path === "/test-env") {
-      return new Response(JSON.stringify({
-        hasAnthropic: !!env.ANTHROPIC_API_KEY,
-        hasOpenAI: !!env.OPENAI_API_KEY,
-        pathEnxergado: path
-      }), { headers: { "Content-Type": "application/json" } });
-    }
-
-    // ROTA CLAUDE
-    if (path === "/api/claude" && request.method === "POST") {
+    // ROTA CLAUDE (Usando .includes para evitar erro de barra /)
+    if (url.pathname.includes("/api/claude") && request.method === "POST") {
       try {
         const { notas, textoAtual } = await request.json();
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -24,19 +17,30 @@ export default {
             "content-type": "application/json",
           },
           body: JSON.stringify({
-           model: "claude-3-5-sonnet-latest",
+            model: "claude-3-5-sonnet-latest",
             max_tokens: 4096,
             system: "Você é um interlocutor de alto nível para uma psicanalista. Use tom sóbrio e clínico.",
-            messages: [{ role: "user", content: `Notas: ${notas || ""}\n\nTexto atual: ${textoAtual || ""}` }],
+            messages: [{ role: "user", content: `Notas: ${notas}\n\nTexto: ${textoAtual}` }],
           }),
         });
+
         const data = await res.json();
-        if (!res.ok) return new Response(JSON.stringify(data), { status: res.status });
-        return new Response(JSON.stringify({ texto: data.content[0].text }), { headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ texto: data.content[0].text }), {
+          headers: { "Content-Type": "application/json" }
+        });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
     }
+
+    // Se for o teste de ambiente
+    if (url.pathname.includes("/test-env")) {
+        return new Response(JSON.stringify({ ok: true, keys: Object.keys(env) }));
+    }
+
+    return env.ASSETS.fetch(request);
+  }
+};
 
     // ROTA OPENAI (IA)
     if (path === "/api/ia" && request.method === "POST") {
