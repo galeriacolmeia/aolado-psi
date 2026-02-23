@@ -1,45 +1,41 @@
 export async function onRequest(context) {
-  const GEMINI_KEY = context.env.GEMINI_API_KEY;
+  const chave = context.env.GEMINI_API_KEY;
 
-  // Se a chave não chegar aqui, o erro 500 para de ser genérico
-  if (!GEMINI_KEY) {
-    return new Response(JSON.stringify({ error: "ERRO_CHAVE_NAO_CONFIGURADA" }), { status: 500 });
-  }
+  if (!chave) return new Response(JSON.stringify({ error: "Falta chave" }), { status: 500 });
 
   try {
     const { notas } = await context.request.json();
     
-    // URL do modelo Flash 1.5 (mais estável para rotas de função)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+    // Mudamos para a versão estável 'v1' e o modelo 'gemini-1.5-flash'
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${chave}`;
 
-    const response = await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
+        contents: [{ 
           parts: [{ 
-            text: `Contexto: Escrita de aula/conferencia para psicanalistas. 
-            Tarefa: Transforme estas notas em uma estrutura acadêmica com conexões teóricas. 
+            text: `Aja como um assistente acadêmico editorial para psicanalistas. 
+            Sua tarefa é organizar notas de estudo em uma estrutura narrativa para uma aula ou palestra, sugerindo conexões teóricas. 
             Notas: ${notas}` 
-          }]
+          }] 
         }]
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    // Se o Google reclamar da chave ou de qualquer outra coisa
+    // Se o Google ainda der erro, aqui pegaremos a mensagem nova
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Google_API_Error: " + data.error.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Erro Google: " + data.error.message }), { status: 500 });
     }
 
-    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
+    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro na geração";
 
     return new Response(JSON.stringify({ texto }), {
       headers: { "Content-Type": "application/json" }
     });
-
   } catch (e) {
-    return new Response(JSON.stringify({ error: "Erro_Log: " + e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }
