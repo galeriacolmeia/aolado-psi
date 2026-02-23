@@ -222,7 +222,7 @@ useEffect(() => {
           </div>
 
 <div className="titulo-wrapper">
-  <span className="label-titulo">Novo texto:</span>
+  <span className="label-titulo">Novo texto1:</span>
 
   <input
     className="titulo-texto"
