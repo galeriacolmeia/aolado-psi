@@ -11,7 +11,7 @@ export async function onRequestPost(context) {
         Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
+        model: "gpt-4o-mini",
         input: `
 Estas são as notas de estudo:
 
@@ -28,11 +28,12 @@ Continue o texto em tom de aula ou palestra psicanalítica.
 
     const data = await response.json();
 
-    const textoGerado =
-      data.output?.[0]?.content?.[0]?.text || "";
+    console.log("OPENAI RESPONSE:", JSON.stringify(data));
 
     return new Response(
-      JSON.stringify({ texto: textoGerado }),
+      JSON.stringify({
+        texto: data.output?.[0]?.content?.[0]?.text || "",
+      }),
       { headers: { "Content-Type": "application/json" } }
     );
 
