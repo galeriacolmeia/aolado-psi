@@ -1,14 +1,24 @@
-import { gerarSugestaoIA } from "./ia";
+import { gerarSugestaoIA } from "./ia"; // Esta é sua função OpenAI atual
 import { useEffect, useMemo, useState, useRef } from "react";
 import mammoth from "mammoth";
 import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import localforage from "localforage";
 
+// Função para chamar o Gemini via Cloudflare Pages Function
+async function gerarSugestaoGemini(notas, textoAtual) {
+  const response = await fetch("/api/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notas, textoAtual })
+  });
+  if (!response.ok) throw new Error("Falha no Gemini");
+  const data = await response.json();
+  return data.texto;
+}
+
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
-const KEY_NOTES_TEXT = "entrelinhaspsi_v1_notes_text";
-const KEY_NOTES_NAME = "entrelinhaspsi_v1_notes_name";
 
 function sanitizeFilename(name) {
   return (name || "texto")
@@ -18,95 +28,93 @@ function sanitizeFilename(name) {
 }
 
 export default function App() {
-
   const [iaCarregando, setIaCarregando] = useState(false);
   const [iaEstaEscrevendo, setIaEstaEscrevendo] = useState(false);
   const [acabouDeGerarIA, setAcabouDeGerarIA] = useState(false);
 
   const [notas, setNotas] = useState("");
   const [modoEdicaoNotas, setModoEdicaoNotas] = useState(false);
-
   const [finalTitle, setFinalTitle] = useState("Novo texto");
   const [finalText, setFinalText] = useState("");
-
   const [hydrated, setHydrated] = useState(false);
 
   const fileInputRef = useRef(null);
 
- const podeMostrarBalao =
-  notas.trim().length > 0 &&
-  !iaCarregando &&
-  !iaEstaEscrevendo &&
-  finalText.trim().length > 0;
+  const podeMostrarBalao =
+    notas.trim().length > 0 &&
+    !iaCarregando &&
+    !iaEstaEscrevendo;
 
   const digitarTexto = async (texto) => {
     setIaEstaEscrevendo(true);
+    // Adicionamos um separador visual se já houver texto
+    const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
+    const textoCompleto = separador + texto;
 
-    for (let i = 0; i < texto.length; i++) {
-      await new Promise(r => setTimeout(r, 15));
-      setFinalText(prev => prev + texto[i]);
+    for (let i = 0; i < textoCompleto.length; i++) {
+      await new Promise(r => setTimeout(r, 10));
+      setFinalText(prev => prev + textoCompleto[i]);
     }
-
     setIaEstaEscrevendo(false);
   };
 
- const gerarSugestao = async () => {
-  if (iaCarregando || !notas.trim()) return;
+  const gerarSugestaoSomada = async () => {
+    if (iaCarregando || !notas.trim()) return;
 
-  setIaCarregando(true);
-  setAcabouDeGerarIA(false);
-  setFinalText("");
+    setIaCarregando(true);
+    setAcabouDeGerarIA(false);
 
-  try {
-    const resposta = await gerarSugestaoIA(notas, finalText);
+    try {
+      // Disparamos as duas IAs ao mesmo tempo para ganhar tempo!
+      const [resOpenAI, resGemini] = await Promise.allSettled([
+        gerarSugestaoIA(notas, finalText),
+        gerarSugestaoGemini(notas, finalText)
+      ]);
 
-    const texto =
-      typeof resposta === "string"
-        ? resposta
-        : resposta?.texto || "";
+      let textoFinalAgrupado = "";
 
-    if (!texto) {
-      setFinalText("⚠️ A IA não retornou texto.");
-      return;
+      if (resOpenAI.status === "fulfilled") {
+        const t = typeof resOpenAI.value === "string" ? resOpenAI.value : resOpenAI.value?.texto;
+        if (t) textoFinalAgrupado += `[Sugestão OpenAI]:\n${t}\n\n`;
+      }
+
+      if (resGemini.status === "fulfilled") {
+        textoFinalAgrupado += `[Sugestão Gemini]:\n${resGemini.value}`;
+      }
+
+      if (!textoFinalAgrupado) {
+        setFinalText(prev => prev + "\n⚠️ Nenhuma IA conseguiu responder.");
+      } else {
+        await digitarTexto(textoFinalAgrupado);
+        setAcabouDeGerarIA(true);
+      }
+
+    } catch (e) {
+      console.error(e);
+      setFinalText(prev => prev + "\n⚠️ Erro ao processar sugestões.");
+    } finally {
+      setIaCarregando(false);
     }
+  };
 
-    await digitarTexto(texto);
-    setAcabouDeGerarIA(true);
+  // ... (Seus outros useEffects e funções de exportação permanecem iguais)
+  useEffect(() => {
+    const notasSalvas = localStorage.getItem("notas");
+    if (notasSalvas) setNotas(notasSalvas);
+  }, []);
 
-  } catch (e) {
-    console.error(e);
-    setFinalText("⚠️ Erro ao gerar texto.");
-  } finally {
-    setIaCarregando(false);
-  }
-};
-
-useEffect(() => {
-  const notasSalvas = localStorage.getItem("notas");
-  if (notasSalvas) {
-    setNotas(notasSalvas);
-  }
-}, []);
-
-useEffect(() => {
-  if (notas !== "") {
-    localStorage.setItem("notas", notas);
-  }
-}, [notas]);
+  useEffect(() => {
+    if (notas !== "") localStorage.setItem("notas", notas);
+  }, [notas]);
 
   useEffect(() => {
     (async () => {
       const savedFinal = await localforage.getItem(KEY_FINAL_TEXT);
       const savedTitle = await localforage.getItem(KEY_FINAL_TITLE);
-
-    if (savedFinal && !savedFinal.startsWith("⚠️")) {
-  setFinalText(savedFinal);
-}
+      if (savedFinal && !savedFinal.startsWith("⚠️")) setFinalText(savedFinal);
       if (savedTitle) setFinalTitle(savedTitle);
-
       setHydrated(true);
     })();
-
   }, []);
 
   useEffect(() => {
@@ -118,72 +126,40 @@ useEffect(() => {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
-
-    const textoLimpo = result.value
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-
-    setNotas(textoLimpo);
+    setNotas(result.value.replace(/\n{3,}/g, "\n\n").trim());
   };
 
   const exportarDocx = async () => {
     const doc = new Document({
-      sections: [
-        {
-          children: finalText.split("\n").map(
-            linha => new Paragraph({ children: [new TextRun(linha)] })
-          ),
-        },
-      ],
+      sections: [{
+        children: finalText.split("\n").map(l => new Paragraph({ children: [new TextRun(l)] })),
+      }],
     });
-
     const blob = await Packer.toBlob(doc);
     saveAs(blob, sanitizeFilename(finalTitle) + ".docx");
   };
 
   return (
     <div className="app tema-1">
-
       <div className="topbar">
         <div className="logo">AoLado Psi</div>
         <div className="save">✓ Salvo</div>
       </div>
 
       <div className="main">
-
-        {/* NOTAS */}
         <div className="column">
-
           <div className="column-header">
             <span>NOTAS</span>
-
             <div className="actions">
-
-              <input
-                type="file"
-                accept=".docx"
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                onChange={handleFileUpload}
-              />
-
-              <button onClick={() => fileInputRef.current.click()}>
-                Abrir notas
-              </button>
-
-              <button
-                onClick={() => setModoEdicaoNotas(prev => !prev)}
-                className={modoEdicaoNotas ? "ativo" : ""}
-              >
+              <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
+              <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
+              <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
                 {modoEdicaoNotas ? "Concluir" : "Editar"}
               </button>
-
             </div>
           </div>
-
           <textarea
             className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`}
             value={notas}
@@ -191,81 +167,44 @@ useEffect(() => {
             placeholder="Suas notas…"
             readOnly={!modoEdicaoNotas}
           />
-
         </div>
 
-        {/* TEXTO */}
         <div className="column">
-
           <div className="column-header">
             <span>TEXTO</span>
-
             <div className="actions">
               <button onClick={exportarDocx}>Exportar .docx</button>
-
-              <button onClick={() => {
-                setFinalText("");
-                setAcabouDeGerarIA(false);
-              }}>
-                Limpar tudo
-              </button>
-
-              <button onClick={() => {
-                setFinalTitle("novo texto");
-                setFinalText("");
-                setAcabouDeGerarIA(false);
-              }}>
-                Novo Texto
-              </button>
-
+              <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
+              <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
             </div>
           </div>
 
-<div className="titulo-wrapper">
-  <span className="label-titulo">Título:</span>
-
-  <input
-    className="titulo-texto"
-    value={finalTitle}
-    onChange={(e) => setFinalTitle(e.target.value)}
-    placeholder="Digite o título…"
-  />
-</div>
+          <div className="titulo-wrapper">
+            <span className="label-titulo">Título:</span>
+            <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} placeholder="Digite o título…" />
+          </div>
 
           <div className={`area-texto ${iaCarregando ? "ia-ativa" : ""}`}>
-
-            <input
-              className="titulo-texto"
-              value={finalTitle}
-              onChange={(e) => setFinalTitle(e.target.value)}
-              placeholder="Título do texto"
-            />
-
             {podeMostrarBalao && (
-              <div className="balao-ia" onClick={gerarSugestao}>
-                💡 Deseja sugestões a partir das notas?
+              <div className="balao-ia" onClick={gerarSugestaoSomada}>
+                💡 Obter sugestões (OpenAI + Gemini)
               </div>
             )}
 
             {iaCarregando && (
               <div className="balao-ia carregando">
-                …gerando texto…
+                …consultando as IAs…
               </div>
             )}
 
             <textarea
               className="editor"
               value={finalText}
-              onChange={(e) => {
-                setFinalText(e.target.value);
-                setAcabouDeGerarIA(false);
-              }}
+              onChange={(e) => { setFinalText(e.target.value); setAcabouDeGerarIA(false); }}
               placeholder="Escreva aqui…"
             />
-
           </div>
         </div>
-
       </div>
     </div>
   );
