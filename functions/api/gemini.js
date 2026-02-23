@@ -1,3 +1,5 @@
+// Update: 23-02-2026 - Versão 1.0 Pro.
+
 export async function onRequest(context) {
   const chave = context.env.GEMINI_API_KEY;
 
@@ -6,8 +8,8 @@ export async function onRequest(context) {
   try {
     const { notas } = await context.request.json();
     
-    // Usando 'gemini-1.5-flash-latest' que é o codinome mais aceito na v1
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${chave}`;
+    // Usando o Gemini 1.0 Pro, que tem a maior compatibilidade de rotas
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${chave}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -15,9 +17,7 @@ export async function onRequest(context) {
       body: JSON.stringify({
         contents: [{ 
           parts: [{ 
-            text: `Contexto: Assistente para psicanalistas. 
-            Objetivo: Transformar notas em roteiro de aula/palestra acadêmica. 
-            Notas: ${notas}` 
+            text: `Aja como um assistente acadêmico para psicanalistas. Transforme estas notas em uma estrutura para aula ou palestra: ${notas}` 
           }] 
         }]
       })
@@ -26,7 +26,7 @@ export async function onRequest(context) {
     const data = await res.json();
 
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Erro Detalhado: " + data.error.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Erro Google: " + data.error.message }), { status: 500 });
     }
 
     const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro na geração";
