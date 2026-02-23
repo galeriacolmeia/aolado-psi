@@ -1,3 +1,5 @@
+// Versao 1.1 - Teste de rota
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
