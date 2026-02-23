@@ -39,3 +39,4 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: "Erro interno: " + e.message }), { status: 500 });
   }
 }
+
