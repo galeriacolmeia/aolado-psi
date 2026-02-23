@@ -28,7 +28,10 @@ Continue o texto em tom de aula ou palestra psicanalítica.
 
     const data = await response.json();
 
+    console.log("OPENAI RESPONSE:", JSON.stringify(data, null, 2));
+
     // 🔥 EXTRAÇÃO SEGURA DO TEXTO
+
     const textoGerado =
       data.output?.[0]?.content?.[0]?.text ||
       data.output_text ||
