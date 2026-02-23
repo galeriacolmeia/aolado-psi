@@ -18,7 +18,7 @@ export async function onRequest(context) {
       body: JSON.stringify({
         contents: [{
           parts: [{ 
-            text: `Contexto: Escrita de aula/palestra para psicanalistas. 
+            text: `Contexto: Escrita de aula/conferencia para psicanalistas. 
             Tarefa: Transforme estas notas em uma estrutura acadêmica com conexões teóricas. 
             Notas: ${notas}` 
           }]
