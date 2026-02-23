@@ -211,7 +211,7 @@ useEffect(() => {
               </button>
 
               <button onClick={() => {
-                setFinalTitle("Novo texto2");
+                setFinalTitle("novo texto");
                 setFinalText("");
                 setAcabouDeGerarIA(false);
               }}>
@@ -222,7 +222,7 @@ useEffect(() => {
           </div>
 
 <div className="titulo-wrapper">
-  <span className="label-titulo">Novo texto1:</span>
+  <span className="label-titulo">Título:</span>
 
   <input
     className="titulo-texto"
