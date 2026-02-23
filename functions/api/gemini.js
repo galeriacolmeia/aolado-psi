@@ -4,40 +4,33 @@ export async function onRequest(context) {
 
   try {
     const { notas } = await context.request.json();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${chave}`;
+    // Voltando para o Flash que é menos rigoroso com filtros que o Pro
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${chave}`;
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ 
-          parts: [{ 
-            text: "Contexto: Transcrição acadêmica para estudo. Tarefa: Organize estas notas de estudo em tópicos estruturados, mantendo a terminologia original: " + notas 
-          }] 
-        }],
+        contents: [{ parts: [{ text: "Traduza e organize estas notas de estudo para um formato de tópicos claros: " + notas }] }],
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.4, // Menor temperatura = resposta mais focada e menos chances de bloqueio
-          topP: 0.8
-        }
+        ]
       })
     });
 
     const data = await res.json();
-    
-    // Se o Google bloquear, ele enviará um 'finishReason'
-    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    const motivoBloqueio = data.candidates?.[0]?.finishReason;
 
-    if (texto) {
+    // Se houver texto, ele entrega. Se não, ele vasculha o JSON atrás do erro real.
+    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const texto = data.candidates[0].content.parts[0].text;
       return new Response(JSON.stringify({ texto }), { headers: { "Content-Type": "application/json" } });
     } else {
-      return new Response(JSON.stringify({ texto: "O Gemini recusou a geração por segurança (Motivo: " + motivoBloqueio + "). Tente notas menos específicas." }), { status: 200 });
+      // Captura o erro mesmo se 'candidates' estiver vazio
+      const erroGoogle = data.promptFeedback?.blockReason || data.error?.message || "Bloqueio de conteúdo sensível";
+      return new Response(JSON.stringify({ texto: "O Gemini silenciou a resposta por: " + erroGoogle }), { status: 200 });
     }
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
