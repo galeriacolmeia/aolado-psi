@@ -8,14 +8,11 @@ import localforage from "localforage";
 // Função para chamar o Gemini via Cloudflare Pages Function
 
 async function gerarSugestaoGemini(notas, textoAtual) {
-  // Mudamos de "/api/gemini" para "api/gemini" (sem a barra inicial) 
-  // ou usamos o caminho absoluto para testar.
-  const response = await fetch("/api/gemini", { 
+  const response = await fetch("/api/gemini", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ notas, textoAtual })
-  });
-  
+    body: JSON.stringify({ notas: notas, textoAtual: textoAtual }) // Garantindo o nome das propriedades
+  });  
   if (!response.ok) {
      console.error("Erro na chamada:", response.status);
      // Se der 404 aqui, o arquivo gemini.js pode estar com nome diferente no GitHub
