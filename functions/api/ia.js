@@ -28,13 +28,21 @@ Continue o texto em tom de aula ou palestra psicanalítica.
 
     const data = await response.json();
 
-    return new Response(JSON.stringify({ texto: data.output_text }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    // 🔥 EXTRAÇÃO SEGURA DO TEXTO
+    const textoGerado =
+      data.output?.[0]?.content?.[0]?.text ||
+      data.output_text ||
+      "";
+
+    return new Response(
+      JSON.stringify({ texto: textoGerado }),
+      { headers: { "Content-Type": "application/json" } }
+    );
 
   } catch (err) {
-    return new Response(JSON.stringify({ erro: err.message }), {
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ erro: err.message }),
+      { status: 500 }
+    );
   }
 }
