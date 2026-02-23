@@ -1,19 +1,19 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname.replace(/\/$/, "");
+    const path = url.pathname.toLowerCase();
 
-    // ROTA DE TESTE
-    if (path === "/test-env") {
+    // ROTA DE TESTE ABSOLUTO
+    if (path.includes("/test-env")) {
       return new Response(JSON.stringify({
-        hasAnthropic: !!env.ANTHROPIC_API_KEY,
-        hasOpenAI: !!env.OPENAI_API_KEY,
-        status: "Worker Ativo"
+        message: "Worker está operante",
+        claudeKey: !!env.ANTHROPIC_API_KEY,
+        openaiKey: !!env.OPENAI_API_KEY
       }), { headers: { "Content-Type": "application/json" } });
     }
 
     // ROTA CLAUDE
-    if (path === "/api/claude" && request.method === "POST") {
+    if (path.includes("/api/claude") && request.method === "POST") {
       try {
         const { notas, textoAtual } = await request.json();
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -26,13 +26,12 @@ export default {
           body: JSON.stringify({
             model: "claude-3-5-sonnet-latest",
             max_tokens: 4096,
-            system: "Você é um interlocutor de alto nível para uma psicanalista. Use tom sóbrio e clínico.",
+            system: "Você é um interlocutor de alto nível para uma psicanalista.",
             messages: [{ role: "user", content: `Notas: ${notas || ""}\n\nTexto atual: ${textoAtual || ""}` }],
           }),
         });
 
         const data = await res.json();
-        if (!res.ok) return new Response(JSON.stringify(data), { status: res.status });
         return new Response(JSON.stringify({ texto: data.content[0].text }), { 
           headers: { "Content-Type": "application/json" } 
         });
@@ -41,8 +40,8 @@ export default {
       }
     }
 
-    // ROTA OPENAI
-    if (path === "/api/ia" && request.method === "POST") {
+    // ROTA OPENAI (IA)
+    if (path.includes("/api/ia") && request.method === "POST") {
       try {
         const { notas, textoAtual } = await request.json();
         const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -53,24 +52,17 @@ export default {
           },
           body: JSON.stringify({
             model: "gpt-4o",
-            messages: [
-              { role: "system", content: "Você é um assistente de escrita para psicanalistas." },
-              { role: "user", content: `Notas: ${notas}\n\nTexto: ${textoAtual}` }
-            ],
+            messages: [{ role: "user", content: `Notas: ${notas}\n\nTexto: ${textoAtual}` }],
           }),
         });
-
         const data = await res.json();
         if (!res.ok) return new Response(JSON.stringify(data), { status: res.status });
-        return new Response(JSON.stringify({ sugestao: data.choices[0].message.content }), { 
-          headers: { "Content-Type": "application/json" } 
-        });
+        return new Response(JSON.stringify({ sugestao: data.choices[0].message.content }), { headers: { "Content-Type": "application/json" } });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
     }
 
-    // Se não for nenhuma rota de API, serve os arquivos estáticos (o site)
     return env.ASSETS.fetch(request);
   }
 };
