@@ -7,18 +7,13 @@ import localforage from "localforage";
 
 // Função para chamar o Gemini via Cloudflare Pages Function
 
-async function gerarSugestaoGemini(notas, textoAtual) {
-  const response = await fetch("/api/gemini", {
+async function gerarSugestaoClaude(notas, textoAtual) {
+  const response = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ notas: notas, textoAtual: textoAtual }) // Garantindo o nome das propriedades
+    body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
   });  
-  if (!response.ok) {
-     console.error("Erro na chamada:", response.status);
-     // Se der 404 aqui, o arquivo gemini.js pode estar com nome diferente no GitHub
-     throw new Error(`Erro ${response.status} ao acessar a API`);
-  }
-  
+  if (!response.ok) throw new Error(`Erro Claude: ${response.status}`);
   const data = await response.json();
   return data.texto;
 }
@@ -69,38 +64,40 @@ const gerarSugestaoSomada = async () => {
   setIaCarregando(true);
   setAcabouDeGerarIA(false);
 
+  // Criamos uma função interna para "digitar" cada resposta assim que ela chegar
+  const processarResposta = async (promessa, nomeIA) => {
+    try {
+      const resultado = await promessa;
+      const texto = typeof resultado === "string" ? resultado : resultado?.texto;
+      if (texto) {
+        // Adiciona um cabeçalho discreto para ela saber de qual IA veio
+        await digitarTexto(`\n\n[Sugestão ${nomeIA}]:\n${texto}`);
+      }
+    } catch (e) {
+      console.error(`Erro na ${nomeIA}:`, e);
+    }
+  };
+
   try {
-    const [resOpenAI, resGemini] = await Promise.allSettled([
-      gerarSugestaoIA(notas, finalText),
-      gerarSugestaoGemini(notas, finalText)
-    ]);
+    // DISPARO EM PARALELO: 
+    // O Claude é disparado primeiro. Não usamos 'await' na frente do processarResposta
+    // para que eles rodem de forma independente!
+    
+    processarResposta(gerarSugestaoClaude(notas, finalText), "Claude");
+    processarResposta(gerarSugestaoIA(notas, finalText), "OpenAI");
 
-    let textoFinalAgrupado = "";
-
-    // Adiciona o resultado da OpenAI (sem o nome da IA)
-    if (resOpenAI.status === "fulfilled") {
-      const t = typeof resOpenAI.value === "string" ? resOpenAI.value : resOpenAI.value?.texto;
-      if (t) textoFinalAgrupado += `${t}\n\n`;
-    }
-
-    // Adiciona um separador discreto e o resultado do Gemini (sem o nome da IA)
-    if (resGemini.status === "fulfilled") {
-      textoFinalAgrupado += `---\n\n${resGemini.value}`;
-    }
-
-    if (!textoFinalAgrupado) {
-      setFinalText(prev => prev + "\n⚠️ Não foi possível gerar a sugestão agora.");
-    } else {
-      await digitarTexto(textoFinalAgrupado);
-      setAcabouDeGerarIA(true);
-    }
+    // Mantemos o loading ativo por um tempo ou até o fim das chamadas
+    setAcabouDeGerarIA(true);
   } catch (e) {
     console.error(e);
-    setFinalText(prev => prev + "\n⚠️ Erro ao processar.");
   } finally {
+    // Opcional: remover o loading após o disparo ou após a primeira resposta
     setIaCarregando(false);
   }
 };
+
+
+
 
   // ... (Seus outros useEffects e funções de exportação permanecem iguais)
   useEffect(() => {
