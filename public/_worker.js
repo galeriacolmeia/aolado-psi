@@ -10,7 +10,7 @@ if (url.pathname === "/test-env") {
   }), { headers: { "Content-Type": "application/json" } });
 }
 
-    // ROTA CLAUDE
+  // ROTA CLAUDE
     if (url.pathname === "/api/claude" && request.method === "POST") {
       try {
         const { notas, textoAtual } = await request.json();
@@ -18,20 +18,32 @@ if (url.pathname === "/test-env") {
           method: "POST",
           headers: {
             "x-api-key": env.ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
+            "anthropic-version": "2023-06-01", // Verifique se esta versão está correta
             "content-type": "application/json",
           },
           body: JSON.stringify({
             model: "claude-3-5-sonnet-20240620",
             max_tokens: 4096,
             system: "Você é um interlocutor de alto nível para uma psicanalista. Use tom sóbrio e clínico.",
-            messages: [{ role: "user", content: `Notas: ${notas}\n\nTexto atual: ${textoAtual}` }],
+            messages: [{ role: "user", content: `Notas: ${notas || ""}\n\nTexto atual: ${textoAtual || ""}` }],
           }),
         });
+
         const data = await res.json();
-        return new Response(JSON.stringify({ texto: data.content[0].text }), { headers: { "Content-Type": "application/json" } });
+
+        if (!res.ok) {
+          // Isso vai nos mostrar o erro real da Anthropic no console do navegador
+          return new Response(JSON.stringify({ error: data.error }), { 
+            status: res.status, 
+            headers: { "Content-Type": "application/json" } 
+          });
+        }
+
+        return new Response(JSON.stringify({ texto: data.content[0].text }), { 
+          headers: { "Content-Type": "application/json" } 
+        });
       } catch (e) {
-        return new Response(JSON.stringify({ error: "Erro no Worker Claude: " + e.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: "Erro no Worker: " + e.message }), { status: 500 });
       }
     }
 
