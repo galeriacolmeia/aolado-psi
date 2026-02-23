@@ -1,26 +1,38 @@
 export async function onRequest(context) {
   const chave = context.env.GEMINI_API_KEY;
-  if (!chave) return new Response(JSON.stringify({ error: "Falta chave ANTHROPIC_API_KEY" }), { status: 500 });
-
-  // Endpoint oficial para listar modelos
-  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${chave}`;
+  if (!chave) return new Response(JSON.stringify({ error: "Falta chave" }), { status: 500 });
 
   try {
-    const res = await fetch(url);
-    const data = await res.json();
+    const { notas } = await context.request.json();
     
-    // Filtramos apenas os modelos que suportam a geração de conteúdo (texto)
-    const modelosValidos = data.models
-      ?.filter(m => m.supportedGenerationMethods.includes("generateContent"))
-      .map(m => m.name.replace("models/", ""))
-      .join(", ");
+    // Usando o nome EXATO que apareceu na sua lista de varredura
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${chave}`;
 
-    return new Response(JSON.stringify({ 
-      texto: "Lista de modelos disponíveis para a sua chave: " + (modelosValidos || "Nenhum modelo encontrado.") 
-    }), {
-      headers: { "Content-Type": "application/json" }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ 
+          parts: [{ 
+            text: "Atue como um redator acadêmico. Transforme estas notas em um texto estruturado, mantendo o rigor dos conceitos: " + notas 
+          }] 
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048
+        }
+      })
     });
+
+    const data = await res.json();
+    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (texto) {
+      return new Response(JSON.stringify({ texto }), { headers: { "Content-Type": "application/json" } });
+    } else {
+      return new Response(JSON.stringify({ texto: "O modelo recusou. Erro: " + JSON.stringify(data) }), { status: 200 });
+    }
   } catch (e) {
-    return new Response(JSON.stringify({ error: "Erro na varredura: " + e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }
