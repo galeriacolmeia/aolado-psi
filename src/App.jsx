@@ -82,14 +82,18 @@ export default function App() {
   }
 };
 
-  useEffect(() => {
-    localStorage.setItem("notas", notas);
-  }, [notas]);
+useEffect(() => {
+  const notasSalvas = localStorage.getItem("notas");
+  if (notasSalvas) {
+    setNotas(notasSalvas);
+  }
+}, []);
 
-  useEffect(() => {
-    const notasSalvas = localStorage.getItem("notas");
-    if (notasSalvas) setNotas(notasSalvas);
-  }, []);
+useEffect(() => {
+  if (notas !== "") {
+    localStorage.setItem("notas", notas);
+  }
+}, [notas]);
 
   useEffect(() => {
     (async () => {
@@ -103,6 +107,7 @@ export default function App() {
 
       setHydrated(true);
     })();
+
   }, []);
 
   useEffect(() => {
