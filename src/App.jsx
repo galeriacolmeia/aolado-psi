@@ -211,7 +211,7 @@ useEffect(() => {
               </button>
 
               <button onClick={() => {
-                setFinalTitle("Novo texto");
+                setFinalTitle("Novo Texto");
                 setFinalText("");
                 setAcabouDeGerarIA(false);
               }}>
