@@ -2,6 +2,14 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+if (url.pathname === "/test-env") {
+  return new Response(JSON.stringify({
+    hasAnthropic: !!env.ANTHROPIC_API_KEY,
+    hasOpenAI: !!env.OPENAI_API_KEY,
+    keysFound: Object.keys(env)
+  }), { headers: { "Content-Type": "application/json" } });
+}
+
     // ROTA CLAUDE
     if (url.pathname === "/api/claude" && request.method === "POST") {
       try {
