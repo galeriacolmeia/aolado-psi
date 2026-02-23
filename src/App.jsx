@@ -58,44 +58,44 @@ export default function App() {
     setIaEstaEscrevendo(false);
   };
 
-  const gerarSugestaoSomada = async () => {
-    if (iaCarregando || !notas.trim()) return;
+const gerarSugestaoSomada = async () => {
+  if (iaCarregando || !notas.trim()) return;
 
-    setIaCarregando(true);
-    setAcabouDeGerarIA(false);
+  setIaCarregando(true);
+  setAcabouDeGerarIA(false);
 
-    try {
-      // Disparamos as duas IAs ao mesmo tempo para ganhar tempo!
-      const [resOpenAI, resGemini] = await Promise.allSettled([
-        gerarSugestaoIA(notas, finalText),
-        gerarSugestaoGemini(notas, finalText)
-      ]);
+  try {
+    const [resOpenAI, resGemini] = await Promise.allSettled([
+      gerarSugestaoIA(notas, finalText),
+      gerarSugestaoGemini(notas, finalText)
+    ]);
 
-      let textoFinalAgrupado = "";
+    let textoFinalAgrupado = "";
 
-      if (resOpenAI.status === "fulfilled") {
-        const t = typeof resOpenAI.value === "string" ? resOpenAI.value : resOpenAI.value?.texto;
-        if (t) textoFinalAgrupado += `[Sugestão OpenAI]:\n${t}\n\n`;
-      }
-
-      if (resGemini.status === "fulfilled") {
-        textoFinalAgrupado += `[Sugestão Gemini]:\n${resGemini.value}`;
-      }
-
-      if (!textoFinalAgrupado) {
-        setFinalText(prev => prev + "\n⚠️ Nenhuma IA conseguiu responder.");
-      } else {
-        await digitarTexto(textoFinalAgrupado);
-        setAcabouDeGerarIA(true);
-      }
-
-    } catch (e) {
-      console.error(e);
-      setFinalText(prev => prev + "\n⚠️ Erro ao processar sugestões.");
-    } finally {
-      setIaCarregando(false);
+    // Adiciona o resultado da OpenAI (sem o nome da IA)
+    if (resOpenAI.status === "fulfilled") {
+      const t = typeof resOpenAI.value === "string" ? resOpenAI.value : resOpenAI.value?.texto;
+      if (t) textoFinalAgrupado += `${t}\n\n`;
     }
-  };
+
+    // Adiciona um separador discreto e o resultado do Gemini (sem o nome da IA)
+    if (resGemini.status === "fulfilled") {
+      textoFinalAgrupado += `---\n\n${resGemini.value}`;
+    }
+
+    if (!textoFinalAgrupado) {
+      setFinalText(prev => prev + "\n⚠️ Não foi possível gerar a sugestão agora.");
+    } else {
+      await digitarTexto(textoFinalAgrupado);
+      setAcabouDeGerarIA(true);
+    }
+  } catch (e) {
+    console.error(e);
+    setFinalText(prev => prev + "\n⚠️ Erro ao processar.");
+  } finally {
+    setIaCarregando(false);
+  }
+};
 
   // ... (Seus outros useEffects e funções de exportação permanecem iguais)
   useEffect(() => {
@@ -185,17 +185,17 @@ export default function App() {
           </div>
 
           <div className={`area-texto ${iaCarregando ? "ia-ativa" : ""}`}>
-            {podeMostrarBalao && (
-              <div className="balao-ia" onClick={gerarSugestaoSomada}>
-                💡 Obter sugestões (OpenAI + Gemini)
-              </div>
-            )}
+          {podeMostrarBalao && (
+  <div className="balao-ia" onClick={gerarSugestaoSomada}>
+    💡 Deseja uma sugestão baseada nas suas notas?
+  </div>
+)}
 
-            {iaCarregando && (
-              <div className="balao-ia carregando">
-                …consultando as IAs…
-              </div>
-            )}
+{iaCarregando && (
+  <div className="balao-ia carregando">
+    …gerando texto…
+  </div>
+)}
 
             <textarea
               className="editor"
