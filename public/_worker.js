@@ -24,7 +24,7 @@ export default {
             "content-type": "application/json",
           },
           body: JSON.stringify({
-            model: "claude-3-5-sonnet-20240620",
+           model: "claude-3-5-sonnet-latest",
             max_tokens: 4096,
             system: "Você é um interlocutor de alto nível para uma psicanalista. Use tom sóbrio e clínico.",
             messages: [{ role: "user", content: `Notas: ${notas || ""}\n\nTexto atual: ${textoAtual || ""}` }],
