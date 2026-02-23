@@ -1,32 +1,43 @@
-export async function onRequest(context) {
-  const chave = context.env.ANTHROPIC_API_KEY;
-  if (!chave) return new Response(JSON.stringify({ error: "Falta chave Claude" }), { status: 500 });
+export async function onRequestPost(context) {
+  const { request, env } = context;
 
   try {
-    const { notas } = await context.request.json();
+    const { notas, textoAtual } = await request.json();
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": chave,
+        "x-api-key": env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
+        "content-type": "application/json",
       },
       body: JSON.stringify({
         model: "claude-3-5-sonnet-20240620",
         max_tokens: 4096,
-        system: "Você é um assistente de escrita para psicanalistas. Seu estilo é sóbrio, acadêmico e profundo. Não use saudações, não faça introduções. Vá direto ao texto estruturado, expandindo as notas com rigor teórico.",
-        messages: [{ role: "user", content: "Organize e amplie estas notas: " + notas }]
-      })
+        system: "Você é um interlocutor de alto nível para uma psicanalista. Use tom sóbrio, clínico e denso. Evite tópicos e bullets. Use vocabulário técnico da psicanálise.",
+        messages: [
+          { role: "user", content: `Notas: ${notas}\n\nTexto atual: ${textoAtual}` }
+        ],
+      }),
     });
 
-    const data = await res.json();
-    const texto = data.content[0].text;
+    const data = await response.json();
 
-    return new Response(JSON.stringify({ texto }), {
+    if (!response.ok) {
+      return new Response(JSON.stringify({ error: data.error }), { 
+        status: response.status,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    return new Response(JSON.stringify({ texto: data.content[0].text }), {
+      headers: { "Content-Type": "application/json" },
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
       headers: { "Content-Type": "application/json" }
     });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }
