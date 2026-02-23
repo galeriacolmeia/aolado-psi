@@ -96,7 +96,9 @@ export default function App() {
       const savedFinal = await localforage.getItem(KEY_FINAL_TEXT);
       const savedTitle = await localforage.getItem(KEY_FINAL_TITLE);
 
-      if (savedFinal) setFinalText(savedFinal);
+    if (savedFinal && !savedFinal.startsWith("⚠️")) {
+  setFinalText(savedFinal);
+}
       if (savedTitle) setFinalTitle(savedTitle);
 
       setHydrated(true);
