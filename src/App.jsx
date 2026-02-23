@@ -33,12 +33,11 @@ export default function App() {
 
   const fileInputRef = useRef(null);
 
-  const podeMostrarBalao =
-    notas.trim().length > 0 &&
-    finalText.trim().length < 50 &&
-    !iaCarregando &&
-    !iaEstaEscrevendo &&
-    !acabouDeGerarIA;
+ const podeMostrarBalao =
+  notas.trim().length > 0 &&
+  !iaCarregando &&
+  !iaEstaEscrevendo &&
+  finalText.trim().length > 0;
 
   const digitarTexto = async (texto) => {
     setIaEstaEscrevendo(true);
@@ -221,6 +220,17 @@ useEffect(() => {
 
             </div>
           </div>
+
+<div className="titulo-wrapper">
+  <span className="label-titulo">Novo texto:</span>
+
+  <input
+    className="titulo-texto"
+    value={finalTitle}
+    onChange={(e) => setFinalTitle(e.target.value)}
+    placeholder="Digite o título…"
+  />
+</div>
 
           <div className={`area-texto ${iaCarregando ? "ia-ativa" : ""}`}>
 

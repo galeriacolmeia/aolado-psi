@@ -70,16 +70,13 @@ body {
 }
 
 .balao-ia {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  z-index: 5;
-}
-.balao-ia:hover {
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
+.balao-ia:hover {
+  background-color: #e6e6e6;
+}
 
 .tema-1 {
   background: #f7f7f7;
@@ -172,13 +169,20 @@ button:hover {
   color: #fff;
 }
 
+.titulo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-titulo {
+  font-size: 14px;
+  opacity: 0.6;
+}
+
 .titulo-texto {
   border: none;
-  font-size: 18px;
-  font-weight: 600;
+  border-bottom: 1px solid #ccc;
   outline: none;
-  margin-bottom: 10px;
-  width: 100%;
   background: transparent;
-  margin: 0 0 10px 0;
 }
