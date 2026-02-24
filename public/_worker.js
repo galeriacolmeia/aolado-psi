@@ -11,8 +11,8 @@ export default {
       return new Response(JSON.stringify({ status: "ok", path }), { headers: { "Content-Type": "application/json" } });
     }
 
-   // ROTA CLAUDE - MUDAMOS O NOME PARA /api/anthropic PARA TESTE
-    if (path.includes("/api/anthropic")) {
+  // ROTA CLAUDE - AGORA NA RAIZ PARA MATAR O 404
+    if (path === "/analisar-claude") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204 });
       
       try {
