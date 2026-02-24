@@ -1,3 +1,4 @@
+// build 2.0
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
