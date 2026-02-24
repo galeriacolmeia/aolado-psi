@@ -8,18 +8,25 @@ import localforage from "localforage";
 // Função para chamar o Gemini via Cloudflare Pages Function
 
 async function gerarSugestaoClaude(notas, textoAtual) {
-  // Mudamos para /analisar-claude ou /exec-claude conforme o seu Worker
-  const response = await fetch('/analisar-claude', { 
+  // Usando a URL completa para não ter erro de rota
+  const urlApi = window.location.origin + '/analisar-claude';
+  
+  const response = await fetch(urlApi, { 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // Aqui usamos as variáveis que a função recebeu:
     body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
   });
 
-  if (!response.ok) throw new Error(`Erro Claude: ${response.status}`);
-  const data = await response.json();
-  return data.texto;
+  if (!response.ok) {
+    // Se der erro, vamos tentar ler o que o Worker respondeu
+    const errorText = await response.text();
+    console.error("Resposta do servidor:", errorText);
+    throw new Error(`Erro Claude: ${response.status}`);
+  }
+
+  return await response.json();
 }
+
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 
