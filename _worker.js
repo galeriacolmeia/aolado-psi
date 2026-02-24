@@ -2,10 +2,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Se o pedido for para a rota de análise do Claude
-    if (url.pathname.includes("exec-claude")) {
+    // Verificando se a URL contém o nome que o botão enviou
+    if (url.pathname.includes("analisar-claude")) {
       
-      // Se for apenas o navegador perguntando (OPTIONS), a gente libera
+      // Se for o navegador checando a conexão (OPTIONS)
       if (request.method === "OPTIONS") {
         return new Response(null, {
           headers: {
