@@ -1,29 +1,21 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname.toLowerCase();
 
-    // 1. TRATAMENTO DE CORS (Para as duas rotas)
-    // Isso evita que o navegador bloqueie o pedido antes de ele chegar na IA
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        }
-      });
-    }
+    // Se o pedido for para a rota de análise do Claude
+    if (url.pathname.includes("exec-claude")) {
+      
+      // Se for apenas o navegador perguntando (OPTIONS), a gente libera
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+          }
+        });
+      }
 
-    // 2. ROTA DE TESTE
-    if (path.includes("test-env")) {
-      return new Response(JSON.stringify({ status: "ok", path }), { 
-        headers: { "Content-Type": "application/json" } 
-      });
-    }
-
-    // 3. ROTA CLAUDE (ANTHROPIC)
-    if (path.includes("analisar-claude")) {
       try {
         const body = await request.json();
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -41,46 +33,15 @@ export default {
         });
 
         const data = await res.json();
-        return new Response(JSON.stringify(res.ok ? { texto: data.content[0].text } : data), {
-          status: res.status,
+        return new Response(JSON.stringify({ texto: data.content[0].text }), {
           headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
         });
       } catch (e) {
-        return new Response(JSON.stringify({ error: "Erro Worker Claude", detalhes: e.message }), { 
-          status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
-        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
     }
 
-    // 4. ROTA OPENAI (IA) - Aceita /api/ia ou apenas /ia
-    if (path.includes("/ia")) { 
-      try {
-        const body = await request.json();
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: body.prompt || body.text || "Oi" }],
-          }),
-        });
-
-        const data = await res.json();
-        return new Response(JSON.stringify(data), {
-          status: res.status,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: "Erro Worker OpenAI", detalhes: e.message }), { 
-          status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
-        });
-      }
-    }
-
-    // 5. SE NÃO FOR NENHUMA ROTA DE API, SERVE OS ARQUIVOS DO SITE
+    // Se não for a rota da IA, mostra o site normal
     return env.ASSETS.fetch(request);
   }
 };

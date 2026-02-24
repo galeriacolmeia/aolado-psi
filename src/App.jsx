@@ -8,11 +8,16 @@ import localforage from "localforage";
 // Função para chamar o Gemini via Cloudflare Pages Function
 
 async function gerarSugestaoClaude(notas, textoAtual) {
- const response = await fetch('/analisar-claude', {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
+ const response = await fetch(window.location.origin + '/analisar-claude', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+    body: JSON.stringify({
+        notas: notas,
+        textoAtual: textoAtual })
   });  
+
   if (!response.ok) throw new Error(`Erro Claude: ${response.status}`);
   const data = await response.json();
   return data.texto;
