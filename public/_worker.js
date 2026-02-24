@@ -11,9 +11,9 @@ export default {
       return new Response(JSON.stringify({ status: "ok", path }), { headers: { "Content-Type": "application/json" } });
     }
 
-    // ROTA CLAUDE - Usando match mais flexível
-    if (path.includes("/api/claude")) {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204 }); // Para erros de CORS
+   // ROTA CLAUDE - MUDAMOS O NOME PARA /api/anthropic PARA TESTE
+    if (path.includes("/api/anthropic")) {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204 });
       
       try {
         const body = await request.json();

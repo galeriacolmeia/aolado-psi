@@ -8,7 +8,7 @@ import localforage from "localforage";
 // Função para chamar o Gemini via Cloudflare Pages Function
 
 async function gerarSugestaoClaude(notas, textoAtual) {
-  const response = await fetch("/api/claude", {
+  const response = await fetch("/api/anthropic", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
