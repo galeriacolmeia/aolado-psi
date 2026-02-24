@@ -68,44 +68,43 @@ export default function App() {
     setIaEstaEscrevendo(false);
   };
 
+
+
+
+
 const gerarSugestaoSomada = async () => {
   if (iaCarregando || !notas.trim()) return;
 
   setIaCarregando(true);
   setAcabouDeGerarIA(false);
 
-  // Criamos uma função interna para "digitar" cada resposta assim que ela chegar
-  const processarResposta = async (promessa, nomeIA) => {
+  const processarResposta = async (promessa) => {
     try {
       const resultado = await promessa;
       const texto = typeof resultado === "string" ? resultado : resultado?.texto;
       if (texto) {
-        // Adiciona um cabeçalho discreto para ela saber de qual IA veio
-        await digitarTexto(`\n\n[Sugestão ${nomeIA}]:\n${texto}`);
+        // Título discreto conforme solicitado
+        await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
       }
     } catch (e) {
-      console.error(`Erro na ${nomeIA}:`, e);
+      console.error("Erro ao processar resposta");
+    } finally {
+      setIaCarregando(false);
     }
   };
 
-
   try {
-    // DISPARO EM PARALELO: 
-    // O Claude é disparado primeiro. Não usamos 'await' na frente do processarResposta
-    // para que eles rodem de forma independente!
-    
-    processarResposta(gerarSugestaoClaude(notas, finalText), "Claude");
-    processarResposta(gerarSugestaoIA(notas, finalText), "OpenAI");
+    // Chamamos apenas a função que usa o seu Worker (que está apontando para analisar-openai)
+    // Removemos a linha que chamava 'gerarSugestaoIA' para limpar o console de erros 405
+    processarResposta(gerarSugestaoClaude(notas, finalText));
 
-    // Mantemos o loading ativo por um tempo ou até o fim das chamadas
     setAcabouDeGerarIA(true);
   } catch (e) {
     console.error(e);
-  } finally {
-    // Opcional: remover o loading após o disparo ou após a primeira resposta
     setIaCarregando(false);
   }
 };
+
 
 
 
@@ -206,9 +205,10 @@ const gerarSugestaoSomada = async () => {
 
 {iaCarregando && (
   <div className="balao-ia carregando">
-    …gerando texto…
+    ...escrevendo texto...
   </div>
 )}
+
 
             <textarea
               className="editor"
