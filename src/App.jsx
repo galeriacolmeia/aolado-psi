@@ -36,6 +36,25 @@ function sanitizeFilename(name) {
     .trim()
     .slice(0, 80) || "texto";
 }
+const limparNotas = () => {
+    if (window.confirm("Deseja apagar todas as notas?")) {
+      setNotas("");
+      localStorage.removeItem("notas");
+    }
+  };
+
+  const copiarTexto = () => {
+    if (!finalText) return;
+    navigator.clipboard.writeText(finalText).then(() => {
+      alert("Texto copiado para a área de transferência!");
+    });
+  };
+
+
+
+
+
+
 
 export default function App() {
   const [iaCarregando, setIaCarregando] = useState(false);
@@ -68,6 +87,12 @@ export default function App() {
     setIaEstaEscrevendo(false);
   };
 
+const limparNotas = () => {
+  if (window.confirm("Deseja apagar todas as notas?")) {
+    setNotas("");
+    localStorage.removeItem("notas");
+  }
+};
 
 
 
@@ -143,6 +168,21 @@ const gerarSugestaoSomada = async () => {
     setNotas(result.value.replace(/\n{3,}/g, "\n\n").trim());
   };
 
+const copiarTexto = () => {
+  if (!finalText) return;
+  
+  navigator.clipboard.writeText(finalText).then(() => {
+    // Um alerta simples ou você pode criar um estado para mostrar "Copiado!" temporariamente
+    alert("Texto copiado com sucesso!");
+  }).catch(err => {
+    console.error('Erro ao copiar: ', err);
+  });
+};
+
+
+
+
+
   const exportarDocx = async () => {
     const doc = new Document({
       sections: [{
@@ -162,16 +202,24 @@ const gerarSugestaoSomada = async () => {
 
       <div className="main">
         <div className="column">
-          <div className="column-header">
-            <span>NOTAS</span>
-            <div className="actions">
-              <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
-              <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
-              <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
-                {modoEdicaoNotas ? "Concluir" : "Editar"}
-              </button>
-            </div>
-          </div>
+
+
+
+<div className="column-header">
+  <span>NOTAS</span>
+  <div className="actions">
+    <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
+    <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
+    
+    {/* Botão Limpar com cor de destaque negativa */}
+    <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
+    
+    <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
+      {modoEdicaoNotas ? "Concluir" : "Editar"}
+    </button>
+  </div>
+</div>
+
           <textarea
             className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`}
             value={notas}
@@ -182,14 +230,20 @@ const gerarSugestaoSomada = async () => {
         </div>
 
         <div className="column">
-          <div className="column-header">
-            <span>TEXTO</span>
-            <div className="actions">
-              <button onClick={exportarDocx}>Exportar .docx</button>
-              <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
-              <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
-            </div>
-          </div>
+         
+
+ <div className="column-header">
+  <span>TEXTO</span>
+  <div className="actions">
+    {/* Botão Copiar com cor de destaque positiva */}
+    <button onClick={copiarTexto} style={{ fontWeight: "bold", color: "#1a73e8" }}>Copiar Texto</button>
+    
+    <button onClick={exportarDocx}>Exportar .docx</button>
+    <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
+    <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
+  </div>
+</div>
+
 
           <div className="titulo-wrapper">
             <span className="label-titulo">Título:</span>
