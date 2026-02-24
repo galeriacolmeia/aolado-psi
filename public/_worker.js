@@ -1,20 +1,29 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname; // Removido o toLowerCase aqui para testar
+    const path = url.pathname.toLowerCase();
 
-    // LOG DE DIAGNÓSTICO (Aparece no painel do Cloudflare se precisar)
-    console.log(`Recebendo pedido para: ${path} [${request.method}]`);
-
-    // TESTE
-    if (path.includes("test-env")) {
-      return new Response(JSON.stringify({ status: "ok", path }), { headers: { "Content-Type": "application/json" } });
+    // 1. TRATAMENTO DE CORS (Para as duas rotas)
+    // Isso evita que o navegador bloqueie o pedido antes de ele chegar na IA
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
     }
 
-  // ROTA CLAUDE - AGORA NA RAIZ PARA MATAR O 404
-    if (path === "/analisar-claude") {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204 });
-      
+    // 2. ROTA DE TESTE
+    if (path.includes("test-env")) {
+      return new Response(JSON.stringify({ status: "ok", path }), { 
+        headers: { "Content-Type": "application/json" } 
+      });
+    }
+
+    // 3. ROTA CLAUDE (ANTHROPIC)
+    if (path.includes("analisar-claude")) {
       try {
         const body = await request.json();
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -32,24 +41,46 @@ export default {
         });
 
         const data = await res.json();
-        if (!res.ok) return new Response(JSON.stringify(data), { status: res.status });
-        return new Response(JSON.stringify({ texto: data.content[0].text }), { headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify(res.ok ? { texto: data.content[0].text } : data), {
+          status: res.status,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: "Erro Worker Claude", detalhes: e.message }), { 
+          status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+        });
       }
     }
 
-    // ROTA OPENAI
-    if (path.includes("/api/ia")) {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: "oi" }] }),
-      });
-      const data = await res.json();
-      return new Response(JSON.stringify(data), { status: res.status });
+    // 4. ROTA OPENAI (IA) - Aceita /api/ia ou apenas /ia
+    if (path.includes("/ia")) { 
+      try {
+        const body = await request.json();
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: body.prompt || body.text || "Oi" }],
+          }),
+        });
+
+        const data = await res.json();
+        return new Response(JSON.stringify(data), {
+          status: res.status,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "Erro Worker OpenAI", detalhes: e.message }), { 
+          status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+        });
+      }
     }
 
+    // 5. SE NÃO FOR NENHUMA ROTA DE API, SERVE OS ARQUIVOS DO SITE
     return env.ASSETS.fetch(request);
   }
 };
