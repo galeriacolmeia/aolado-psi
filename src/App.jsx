@@ -9,7 +9,7 @@ import localforage from "localforage";
 
 async function gerarSugestaoClaude(notas, textoAtual) {
   // Usando a URL completa para não ter erro de rota
-  const urlApi = window.location.origin + '/analisar-claude';
+ const urlApi = window.location.origin + '/analisar-openai';
   
   const response = await fetch(urlApi, { 
     method: 'POST',
