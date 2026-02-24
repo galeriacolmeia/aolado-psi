@@ -25,12 +25,15 @@ export default {
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
           },
-          body: JSON.stringify({
-            model: "claude-3-5-sonnet-latest",
-            max_tokens: 1024,
-            messages: [{ role: "user", content: `Analise: ${body.notas || ""} ${body.textoAtual || ""}` }],
+         
+        body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022", // Versão estável mais recente
+            max_tokens: 4096,
+            messages: [{ 
+              role: "user", 
+              content: `Analise o seguinte: Notas: ${body.notas || ""} | Texto Atual: ${body.textoAtual || ""}` 
+            }],
           }),
-        });
 
         const data = await res.json();
         return new Response(JSON.stringify(res.ok ? { texto: data.content[0].text } : { error: "Erro na API Anthropic", detalhes: data }), {
@@ -52,6 +55,7 @@ export default {
             "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             model: "gpt-4o",
             messages: [{ role: "user", content: body.prompt || body.text || "Oi" }],
