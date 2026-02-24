@@ -12,10 +12,10 @@ export default {
       }), { headers: { "Content-Type": "application/json" } });
     }
 
-    // ROTA CLAUDE
+  // ROTA CLAUDE (Versão com Diagnóstico de Erro)
     if (path.includes("/api/claude") && request.method === "POST") {
       try {
-        const { notas, textoAtual } = await request.json();
+        const body = await request.json();
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
@@ -26,17 +26,34 @@ export default {
           body: JSON.stringify({
             model: "claude-3-5-sonnet-latest",
             max_tokens: 4096,
-            system: "Você é um interlocutor de alto nível para uma psicanalista.",
-            messages: [{ role: "user", content: `Notas: ${notas || ""}\n\nTexto atual: ${textoAtual || ""}` }],
+            messages: [{ 
+              role: "user", 
+              content: `Analise o texto: ${body.notas || ""} ${body.textoAtual || ""}` 
+            }],
           }),
         });
 
         const data = await res.json();
-        return new Response(JSON.stringify({ texto: data.content[0].text }), { 
-          headers: { "Content-Type": "application/json" } 
-        });
+
+        // Se a Anthropic der erro, o Worker agora repassa a mensagem real
+        if (!res.ok) {
+          return new Response(JSON.stringify({ 
+            error: "Erro na Anthropic", 
+            mensagem_real: data.error?.message || "Verifique saldo/chave" 
+          }), { status: res.status, headers: { "Content-Type": "application/json" } });
+        }
+
+        // Verifica se a resposta tem o formato esperado antes de ler
+        if (data.content && data.content.length > 0) {
+          return new Response(JSON.stringify({ texto: data.content[0].text }), { 
+            headers: { "Content-Type": "application/json" } 
+          });
+        }
+        
+        return new Response(JSON.stringify({ error: "Estrutura de resposta inválida", raw: data }), { status: 500 });
+
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: "Falha no Worker", detalhe: e.message }), { status: 500 });
       }
     }
 
