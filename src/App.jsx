@@ -19,8 +19,8 @@ const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 
 export default function App() {
-  const [iaCarregando, setIaCarregando] = useState(false);
-  const [iaEstaEscrevendo, setIaEstaEscrevendo] = useState(false);
+  const [assistenteCarregando, setAssistenteCarregando] = useState(false);
+  const [assistenteEscrevendo, setAssistenteEscrevendo] = useState(false);
   const [notas, setNotas] = useState("");
   const [modoEdicaoNotas, setModoEdicaoNotas] = useState(false);
   const [finalTitle, setFinalTitle] = useState("Novo texto");
@@ -28,11 +28,10 @@ export default function App() {
   const [hydrated, setHydrated] = useState(false);
   const fileInputRef = useRef(null);
 
-  // O balão aparece se houver notas OU se ela já tiver escrito algo substancial no texto
-  const podeMostrarBalao = (notas.trim().length > 10 || finalText.trim().length > 20) && !iaCarregando && !iaEstaEscrevendo;
+  const podeMostrarBalao = (notas.trim().length > 10 || finalText.trim().length > 20) && !assistenteCarregando && !assistenteEscrevendo;
 
   const limparNotas = () => {
-    if (window.confirm("Deseja apagar todas as notas?")) {
+    if (window.confirm("Deseja apagar tudo?")) {
       setNotas("");
       localStorage.removeItem("notas");
     }
@@ -44,7 +43,7 @@ export default function App() {
   };
 
   const digitarTexto = async (texto) => {
-    setIaEstaEscrevendo(true);
+    setAssistenteEscrevendo(true);
     const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
     const textoParaAdicionar = separador + texto;
     
@@ -52,17 +51,17 @@ export default function App() {
       await new Promise(r => setTimeout(r, 10));
       setFinalText(prev => prev + textoParaAdicionar[i]);
     }
-    setIaEstaEscrevendo(false);
+    setAssistenteEscrevendo(false);
   };
 
   const gerarSugestaoSomada = async () => {
-    setIaCarregando(true);
+    setAssistenteCarregando(true);
     try {
       const resultado = await gerarSugestaoClaude(notas, finalText);
       const texto = typeof resultado === "string" ? resultado : resultado?.texto;
       if (texto) await digitarTexto(`Sugestão para expandir o conteúdo:\n\n${texto}`);
     } catch (e) { console.error(e); }
-    finally { setIaCarregando(false); }
+    finally { setAssistenteCarregando(false); }
   };
 
   useEffect(() => {
@@ -98,7 +97,10 @@ export default function App() {
   return (
     <div className="app tema-1">
       <div className="topbar">
-        <div className="logo">AoLado Psi</div>
+        <div className="logo-container">
+          <div className="logo">AoLado Psi</div>
+          <div className="subtitle">Transformando referências em conhecimento.</div>
+        </div>
         <div className="save"><span>●</span> Alterações salvas automaticamente</div>
       </div>
 
@@ -119,7 +121,7 @@ export default function App() {
             className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`} 
             value={notas} 
             onChange={(e) => setNotas(e.target.value)} 
-            placeholder="Cole aqui tópicos, referências ou trechos para usar na sua produção..." 
+            placeholder="Escreva ou abra aqui tópicos, referências ou trechos para usar na sua produção..." 
             readOnly={!modoEdicaoNotas} 
           />
         </div>
@@ -137,14 +139,14 @@ export default function App() {
             <span className="label-titulo">Título:</span>
             <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} />
           </div>
-          <div className={`area-texto ${podeMostrarBalao || iaCarregando ? "ia-ativa" : ""}`}>
+          <div className={`area-texto ${podeMostrarBalao || assistenteCarregando ? "ia-ativa" : ""}`}>
             {podeMostrarBalao && (
               <div className="balao-ia" onClick={gerarSugestaoSomada}>
                 💡 Sugerir continuação ou análise
               </div>
             )}
             
-            {iaCarregando && (
+            {assistenteCarregando && (
               <div className="balao-ia carregando">...escrevendo texto...</div>
             )}
 
@@ -152,7 +154,7 @@ export default function App() {
               className="editor" 
               value={finalText} 
               onChange={(e) => setFinalText(e.target.value)} 
-              placeholder="Comece a escrever sua aula ou palestra. Adicione insights à esquerda para habilitar sugestões da IA." 
+              placeholder="Comece a escrever sua aula ou palestra. Adicione insights à esquerda para habilitar sugestões." 
             />
           </div>
         </div>
