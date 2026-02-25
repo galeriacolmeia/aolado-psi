@@ -2,40 +2,23 @@
 body { margin: 0; font-family: "Inter", sans-serif; }
 
 .app { height: 100vh; display: flex; flex-direction: column; transition: 0.4s; }
-/* Cabeçalho mais alto e com cores invertidas */
+
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 30px;      /* Aumentei o respiro lateral */
-  height: 80px;         /* Altura maior para o futuro logotipo */
-  background: #2c2c2c;  /* Cinza escuro quase preto */
-  color: #ffffff;       /* Letras claras */
+  padding: 0 30px;
+  height: 80px;
+  background: #2c2c2c;
+  color: #ffffff;
   border-bottom: 1px solid #1a1a1a;
 }
 
-.logo {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-}
+.logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.save { font-size: 13px; opacity: 0.7; font-weight: 400; display: flex; align-items: center; gap: 6px; }
 
-.save {
-  font-size: 13px;
-  opacity: 0.7;
-  font-weight: 400;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+.main { flex: 1; display: flex; gap: 20px; padding: 25px; }
 
-/* Pequeno ajuste para os botões não ficarem "espremidos" com o novo cabeçalho */
-.main {
-  flex: 1;
-  display: flex;
-  gap: 20px;
-  padding: 25px; /* Aumentei um pouco o respiro geral */
-}
 .column { 
   flex: 1; display: flex; flex-direction: column; background: #ffffff; 
   border-radius: 14px; padding: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); 
@@ -43,7 +26,6 @@ body { margin: 0; font-family: "Inter", sans-serif; }
 
 .area-texto { position: relative; height: 100%; display: flex; flex-direction: column; margin-top: 10px; }
 
-/* REGRA DE OURO: Empurra o texto para baixo se o balão existir */
 .area-texto.ia-ativa .editor { padding-top: 55px; }
 
 .editor { 
@@ -59,36 +41,26 @@ body { margin: 0; font-family: "Inter", sans-serif; }
   box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s ease;
 }
 
+.balao-ia.carregando { cursor: default; background-color: #f9f9f9; color: #888; }
+
 .tema-1 { background: #f7f7f7; color: #222; }
 .tema-1 .balao-ia { background: #ffffff; border: 1px solid #e0e0e0; color: #1a73e8; }
 .tema-1 .balao-ia:hover { background: #f0f7ff; border-color: #c2d7ff; transform: translateY(-1px); }
 
-/* Tema 2 */
-.tema-2 { background: #f3efe7; color: #3a352d; }
-.tema-2 .balao-ia { background: #e0d8c7; border: 1px solid #cbbfa6; color: #5d5444; }
-
 .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-weight: 600; }
-.actions { display: flex; gap: 8px; }
-button { border: 1px solid #e2e2e2; background: #f7f7f7; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: 0.2s; }
+
+.actions { display: flex; gap: 8px; flex-wrap: nowrap; }
+
+button { 
+  border: 1px solid #e2e2e2; background: #f7f7f7; padding: 6px 12px; 
+  border-radius: 8px; font-size: 13px; cursor: pointer; transition: 0.2s;
+  white-space: nowrap;
+}
+
+button:hover { background: #ececec; }
 .actions .ativo { background: #000; color: #fff; }
 
-.titulo-wrapper { display: flex; align-items: center; gap: 8px; padding-bottom: 5px; }
-.titulo-texto { border: none; border-bottom: 1px solid #ccc; outline: none; background: transparent; width: 100%; }
-
-
-.actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: nowrap; /* Impede que os botões pulem de linha */
-}
-
-button {
-  white-space: nowrap; /* Impede que o texto dentro do botão quebre */
-  border: 1px solid #e2e2e2;
-  background: #f7f7f7;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: 0.2s;
-}
+.titulo-wrapper { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; }
+.label-titulo { font-size: 14px; opacity: 0.6; }
+.titulo-texto { border: none; border-bottom: 1px solid #ccc; outline: none; background: transparent; width: 100%; font-weight: 500; }
+.editor.readonly { background: #f9f9f9; color: #666; cursor: default; }

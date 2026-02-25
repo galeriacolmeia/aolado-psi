@@ -16,7 +16,6 @@ async function gerarSugestaoClaude(notas, textoAtual) {
   return await response.json();
 }
 
-
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 
@@ -93,18 +92,12 @@ export default function App() {
 
   const exportarDocx = async () => {
     const doc = new Document({ sections: [{ children: finalText.split("\n").map(l => new Paragraph({ children: [new TextRun(l)] })) }] });
-    saveAs(await Packer.toBlob(doc), (finalTitle || "texto") + ".docx");
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, (finalTitle || "texto") + ".docx");
   };
-
-// 
-  // ... (imports e funções auxiliares permanecem iguais)
-
-export default function App() {
-  // ... (estados permanecem iguais)
 
   return (
     <div className="app tema-1">
-      {/* CABEÇALHO REESTILIZADO */}
       <div className="topbar">
         <div className="logo">AoLado Psi</div>
         <div className="save">
