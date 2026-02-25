@@ -95,12 +95,21 @@ export default function App() {
     saveAs(await Packer.toBlob(doc), (finalTitle || "texto") + ".docx");
   };
 
+  // ... (imports e funções auxiliares permanecem iguais)
+
+export default function App() {
+  // ... (estados permanecem iguais)
+
   return (
     <div className="app tema-1">
+      {/* CABEÇALHO REESTILIZADO */}
       <div className="topbar">
         <div className="logo">AoLado Psi</div>
-        <div className="save">✓ Salvo</div>
+        <div className="save">
+          <span>●</span> Alterações salvas automaticamente
+        </div>
       </div>
+
       <div className="main">
         <div className="column">
           <div className="column-header">
@@ -122,6 +131,7 @@ export default function App() {
             readOnly={!modoEdicaoNotas} 
           />
         </div>
+
         <div className="column">
           <div className="column-header">
             <span>TEXTO</span>
