@@ -16,6 +16,7 @@ async function gerarSugestaoClaude(notas, textoAtual) {
   return await response.json();
 }
 
+
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 
@@ -95,6 +96,7 @@ export default function App() {
     saveAs(await Packer.toBlob(doc), (finalTitle || "texto") + ".docx");
   };
 
+// 
   // ... (imports e funções auxiliares permanecem iguais)
 
 export default function App() {
