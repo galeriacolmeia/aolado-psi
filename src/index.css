@@ -3,19 +3,20 @@ body { margin: 0; font-family: "Inter", sans-serif; }
 
 .app { height: 100vh; display: flex; flex-direction: column; transition: 0.4s; }
 
+/* Cabeçalho Cinza Prateado conforme sua escolha */
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 30px;
   height: 80px;
-  background: #2c2c2c;
-  color: #ffffff;
-  border-bottom: 1px solid #1a1a1a;
+  background: #B8B8B8; 
+  color: #333333; /* Texto escuro para contrastar com o cinza claro */
+  border-bottom: 1px solid #a3a3a3;
 }
 
 .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-.save { font-size: 13px; opacity: 0.7; font-weight: 400; display: flex; align-items: center; gap: 6px; }
+.save { font-size: 13px; opacity: 0.8; font-weight: 500; display: flex; align-items: center; gap: 6px; }
 
 .main { flex: 1; display: flex; gap: 20px; padding: 25px; }
 
