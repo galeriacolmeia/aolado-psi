@@ -1,15 +1,12 @@
-import { gerarSugestaoIA } from "./ia"; // Esta é sua função OpenAI atual
+import { gerarSugestaoIA } from "./ia";
 import { useEffect, useMemo, useState, useRef } from "react";
 import mammoth from "mammoth";
 import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import localforage from "localforage";
 
-// Função para chamar o Gemini via Cloudflare Pages Function
-
 async function gerarSugestaoClaude(notas, textoAtual) {
-  // Usando a URL completa para não ter erro de rota
- const urlApi = window.location.origin + '/analisar-openai';
+  const urlApi = window.location.origin + '/analisar-openai';
   
   const response = await fetch(urlApi, { 
     method: 'POST',
@@ -18,10 +15,9 @@ async function gerarSugestaoClaude(notas, textoAtual) {
   });
 
   if (!response.ok) {
-    // Se der erro, vamos tentar ler o que o Worker respondeu
     const errorText = await response.text();
     console.error("Resposta do servidor:", errorText);
-    throw new Error(`Erro Claude: ${response.status}`);
+    throw new Error(`Erro: ${response.status}`);
   }
 
   return await response.json();
@@ -36,25 +32,6 @@ function sanitizeFilename(name) {
     .trim()
     .slice(0, 80) || "texto";
 }
-const limparNotas = () => {
-    if (window.confirm("Deseja apagar todas as notas?")) {
-      setNotas("");
-      localStorage.removeItem("notas");
-    }
-  };
-
-  const copiarTexto = () => {
-    if (!finalText) return;
-    navigator.clipboard.writeText(finalText).then(() => {
-      alert("Texto copiado para a área de transferência!");
-    });
-  };
-
-
-
-
-
-
 
 export default function App() {
   const [iaCarregando, setIaCarregando] = useState(false);
@@ -76,7 +53,6 @@ export default function App() {
 
   const digitarTexto = async (texto) => {
     setIaEstaEscrevendo(true);
-    // Adicionamos um separador visual se já houver texto
     const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
     const textoCompleto = separador + texto;
 
@@ -87,54 +63,51 @@ export default function App() {
     setIaEstaEscrevendo(false);
   };
 
-const limparNotas = () => {
-  if (window.confirm("Deseja apagar todas as notas?")) {
-    setNotas("");
-    localStorage.removeItem("notas");
-  }
-};
+  const limparNotas = () => {
+    if (window.confirm("Deseja apagar todas as notas?")) {
+      setNotas("");
+      localStorage.removeItem("notas");
+    }
+  };
 
+  const copiarTexto = () => {
+    if (!finalText) return;
+    navigator.clipboard.writeText(finalText).then(() => {
+      alert("Texto copiado com sucesso!");
+    }).catch(err => {
+      console.error('Erro ao copiar: ', err);
+    });
+  };
 
+  const gerarSugestaoSomada = async () => {
+    if (iaCarregando || !notas.trim()) return;
 
+    setIaCarregando(true);
+    setAcabouDeGerarIA(false);
 
-const gerarSugestaoSomada = async () => {
-  if (iaCarregando || !notas.trim()) return;
-
-  setIaCarregando(true);
-  setAcabouDeGerarIA(false);
-
-  const processarResposta = async (promessa) => {
-    try {
-      const resultado = await promessa;
-      const texto = typeof resultado === "string" ? resultado : resultado?.texto;
-      if (texto) {
-        // Título discreto conforme solicitado
-        await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
+    const processarResposta = async (promessa) => {
+      try {
+        const resultado = await promessa;
+        const texto = typeof resultado === "string" ? resultado : resultado?.texto;
+        if (texto) {
+          await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
+        }
+      } catch (e) {
+        console.error("Erro ao processar resposta");
+      } finally {
+        setIaCarregando(false);
       }
+    };
+
+    try {
+      processarResposta(gerarSugestaoClaude(notas, finalText));
+      setAcabouDeGerarIA(true);
     } catch (e) {
-      console.error("Erro ao processar resposta");
-    } finally {
+      console.error(e);
       setIaCarregando(false);
     }
   };
 
-  try {
-    // Chamamos apenas a função que usa o seu Worker (que está apontando para analisar-openai)
-    // Removemos a linha que chamava 'gerarSugestaoIA' para limpar o console de erros 405
-    processarResposta(gerarSugestaoClaude(notas, finalText));
-
-    setAcabouDeGerarIA(true);
-  } catch (e) {
-    console.error(e);
-    setIaCarregando(false);
-  }
-};
-
-
-
-
-
-  // ... (Seus outros useEffects e funções de exportação permanecem iguais)
   useEffect(() => {
     const notasSalvas = localStorage.getItem("notas");
     if (notasSalvas) setNotas(notasSalvas);
@@ -168,21 +141,6 @@ const gerarSugestaoSomada = async () => {
     setNotas(result.value.replace(/\n{3,}/g, "\n\n").trim());
   };
 
-const copiarTexto = () => {
-  if (!finalText) return;
-  
-  navigator.clipboard.writeText(finalText).then(() => {
-    // Um alerta simples ou você pode criar um estado para mostrar "Copiado!" temporariamente
-    alert("Texto copiado com sucesso!");
-  }).catch(err => {
-    console.error('Erro ao copiar: ', err);
-  });
-};
-
-
-
-
-
   const exportarDocx = async () => {
     const doc = new Document({
       sections: [{
@@ -202,24 +160,17 @@ const copiarTexto = () => {
 
       <div className="main">
         <div className="column">
-
-
-
-<div className="column-header">
-  <span>NOTAS</span>
-  <div className="actions">
-    <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
-    <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
-    
-    {/* Botão Limpar com cor de destaque negativa */}
-    <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
-    
-    <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
-      {modoEdicaoNotas ? "Concluir" : "Editar"}
-    </button>
-  </div>
-</div>
-
+          <div className="column-header">
+            <span>NOTAS</span>
+            <div className="actions">
+              <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
+              <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
+              <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
+              <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
+                {modoEdicaoNotas ? "Concluir" : "Editar"}
+              </button>
+            </div>
+          </div>
           <textarea
             className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`}
             value={notas}
@@ -230,45 +181,39 @@ const copiarTexto = () => {
         </div>
 
         <div className="column">
-         
-
- <div className="column-header">
-  <span>TEXTO</span>
-  <div className="actions">
-    {/* Botão Copiar com cor de destaque positiva */}
-    <button onClick={copiarTexto} style={{ fontWeight: "bold", color: "#1a73e8" }}>Copiar Texto</button>
-    
-    <button onClick={exportarDocx}>Exportar .docx</button>
-    <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
-    <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
-  </div>
-</div>
-
+          <div className="column-header">
+            <span>TEXTO</span>
+            <div className="actions">
+              <button onClick={copiarTexto} style={{ fontWeight: "bold", color: "#1a73e8" }}>Copiar Texto</button>
+              <button onClick={exportarDocx}>Exportar .docx</button>
+              <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
+              <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
+            </div>
+          </div>
 
           <div className="titulo-wrapper">
             <span className="label-titulo">Título:</span>
             <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} placeholder="Digite o título…" />
           </div>
 
-          <div className={`area-texto ${iaCarregando ? "ia-ativa" : ""}`}>
-          {podeMostrarBalao && (
-  <div className="balao-ia" onClick={gerarSugestaoSomada}>
-    💡 Deseja uma analise sugestão baseada nas suas notas?
-  </div>
-)}
+          <div className="area-texto">
+            {podeMostrarBalao && (
+              <div className="balao-ia" onClick={gerarSugestaoSomada}>
+                💡 Sugerir análise baseada nas notas
+              </div>
+            )}
 
-{iaCarregando && (
-  <div className="balao-ia carregando">
-    ...escrevendo texto...
-  </div>
-)}
-
+            {iaCarregando && (
+              <div className="balao-ia carregando">
+                ...escrevendo texto...
+              </div>
+            )}
 
             <textarea
               className="editor"
               value={finalText}
               onChange={(e) => { setFinalText(e.target.value); setAcabouDeGerarIA(false); }}
-              placeholder="Escreva aqui…"
+              placeholder="A análise aparecerá aqui ou você pode digitar livremente..."
             />
           </div>
         </div>
