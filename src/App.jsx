@@ -147,7 +147,7 @@ export default function App() {
             )}
             
             {assistenteCarregando && (
-              <div className="balao-ia carregando">...escrevendo texto...</div>
+              <div className="balao-ia carregando">...gerando sugestão...</div>
             )}
 
             <textarea 
