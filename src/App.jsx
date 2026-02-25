@@ -1,5 +1,4 @@
-import { gerarSugestaoIA } from "./ia";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import mammoth from "mammoth";
 import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun } from "docx";
@@ -22,7 +21,6 @@ const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 export default function App() {
   const [iaCarregando, setIaCarregando] = useState(false);
   const [iaEstaEscrevendo, setIaEstaEscrevendo] = useState(false);
-  const [acabouDeGerarIA, setAcabouDeGerarIA] = useState(false);
   const [notas, setNotas] = useState("");
   const [modoEdicaoNotas, setModoEdicaoNotas] = useState(false);
   const [finalTitle, setFinalTitle] = useState("Novo texto");
@@ -30,7 +28,8 @@ export default function App() {
   const [hydrated, setHydrated] = useState(false);
   const fileInputRef = useRef(null);
 
-  const podeMostrarBalao = notas.trim().length > 0 && !iaCarregando && !iaEstaEscrevendo;
+  // O balão aparece se houver notas OU se ela já tiver escrito algo substancial no texto
+  const podeMostrarBalao = (notas.trim().length > 10 || finalText.trim().length > 20) && !iaCarregando && !iaEstaEscrevendo;
 
   const limparNotas = () => {
     if (window.confirm("Deseja apagar todas as notas?")) {
@@ -47,21 +46,21 @@ export default function App() {
   const digitarTexto = async (texto) => {
     setIaEstaEscrevendo(true);
     const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
-    const textoCompleto = separador + texto;
-    for (let i = 0; i < textoCompleto.length; i++) {
+    const textoParaAdicionar = separador + texto;
+    
+    for (let i = 0; i < textoParaAdicionar.length; i++) {
       await new Promise(r => setTimeout(r, 10));
-      setFinalText(prev => prev + textoCompleto[i]);
+      setFinalText(prev => prev + textoParaAdicionar[i]);
     }
     setIaEstaEscrevendo(false);
   };
 
   const gerarSugestaoSomada = async () => {
-    if (iaCarregando || !notas.trim()) return;
     setIaCarregando(true);
     try {
       const resultado = await gerarSugestaoClaude(notas, finalText);
       const texto = typeof resultado === "string" ? resultado : resultado?.texto;
-      if (texto) await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
+      if (texto) await digitarTexto(`Sugestão para expandir o conteúdo:\n\n${texto}`);
     } catch (e) { console.error(e); }
     finally { setIaCarregando(false); }
   };
@@ -100,18 +99,16 @@ export default function App() {
     <div className="app tema-1">
       <div className="topbar">
         <div className="logo">AoLado Psi</div>
-        <div className="save">
-          <span>●</span> Alterações salvas automaticamente
-        </div>
+        <div className="save"><span>●</span> Alterações salvas automaticamente</div>
       </div>
 
       <div className="main">
         <div className="column">
           <div className="column-header">
-            <span>NOTAS</span>
+            <span>INSIGHTS / REFERÊNCIAS</span>
             <div className="actions">
               <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
-              <button onClick={() => fileInputRef.current.click()}>Abrir arquivo de notas</button>
+              <button onClick={() => fileInputRef.current.click()}>Abrir arquivo</button>
               <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
               <button onClick={() => setModoEdicaoNotas(!modoEdicaoNotas)} className={modoEdicaoNotas ? "ativo" : ""}>
                 {modoEdicaoNotas ? "Concluir" : "Escrever / Editar"}
@@ -122,14 +119,14 @@ export default function App() {
             className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`} 
             value={notas} 
             onChange={(e) => setNotas(e.target.value)} 
-            placeholder="Cole ou escreva as notas do atendimento aqui..." 
+            placeholder="Cole aqui tópicos, referências ou trechos para usar na sua produção..." 
             readOnly={!modoEdicaoNotas} 
           />
         </div>
 
         <div className="column">
           <div className="column-header">
-            <span>TEXTO</span>
+            <span>TEXTO FINAL</span>
             <div className="actions">
               <button onClick={copiarTexto} style={{ fontWeight: "bold", color: "#1a73e8" }}>Copiar Texto</button>
               <button onClick={exportarDocx}>Exportar .docx</button>
@@ -140,14 +137,22 @@ export default function App() {
             <span className="label-titulo">Título:</span>
             <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} />
           </div>
-          <div className={`area-texto ${(podeMostrarBalao || iaCarregando) ? "ia-ativa" : ""}`}>
-            {podeMostrarBalao && <div className="balao-ia" onClick={gerarSugestaoSomada}>💡 Sugerir análise baseada nas notas</div>}
-            {iaCarregando && <div className="balao-ia carregando">...escrevendo texto...</div>}
+          <div className={`area-texto ${podeMostrarBalao || iaCarregando ? "ia-ativa" : ""}`}>
+            {podeMostrarBalao && (
+              <div className="balao-ia" onClick={gerarSugestaoSomada}>
+                💡 Sugerir continuação ou análise
+              </div>
+            )}
+            
+            {iaCarregando && (
+              <div className="balao-ia carregando">...escrevendo texto...</div>
+            )}
+
             <textarea 
               className="editor" 
               value={finalText} 
-              onChange={(e) => { setFinalText(e.target.value); setAcabouDeGerarIA(false); }} 
-              placeholder="Comece a escrever seu texto aqui ou use o balão acima para uma sugestão..." 
+              onChange={(e) => setFinalText(e.target.value)} 
+              placeholder="Comece a escrever sua aula ou palestra. Adicione insights à esquerda para habilitar sugestões da IA." 
             />
           </div>
         </div>
