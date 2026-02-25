@@ -107,14 +107,20 @@ export default function App() {
             <span>NOTAS</span>
             <div className="actions">
               <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
-              <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
+              <button onClick={() => fileInputRef.current.click()}>Abrir arquivo de notas</button>
               <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
               <button onClick={() => setModoEdicaoNotas(!modoEdicaoNotas)} className={modoEdicaoNotas ? "ativo" : ""}>
-                {modoEdicaoNotas ? "Concluir" : "Editar"}
+                {modoEdicaoNotas ? "Concluir" : "Escrever / Editar"}
               </button>
             </div>
           </div>
-          <textarea className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`} value={notas} onChange={(e) => setNotas(e.target.value)} readOnly={!modoEdicaoNotas} />
+          <textarea 
+            className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`} 
+            value={notas} 
+            onChange={(e) => setNotas(e.target.value)} 
+            placeholder="Cole ou escreva as notas do atendimento aqui..." 
+            readOnly={!modoEdicaoNotas} 
+          />
         </div>
         <div className="column">
           <div className="column-header">
@@ -132,7 +138,12 @@ export default function App() {
           <div className={`area-texto ${(podeMostrarBalao || iaCarregando) ? "ia-ativa" : ""}`}>
             {podeMostrarBalao && <div className="balao-ia" onClick={gerarSugestaoSomada}>💡 Sugerir análise baseada nas notas</div>}
             {iaCarregando && <div className="balao-ia carregando">...escrevendo texto...</div>}
-            <textarea className="editor" value={finalText} onChange={(e) => setFinalText(e.target.value)} placeholder="A análise aparecerá aqui..." />
+            <textarea 
+              className="editor" 
+              value={finalText} 
+              onChange={(e) => { setFinalText(e.target.value); setAcabouDeGerarIA(false); }} 
+              placeholder="Comece a escrever seu texto aqui ou use o balão acima para uma sugestão..." 
+            />
           </div>
         </div>
       </div>
