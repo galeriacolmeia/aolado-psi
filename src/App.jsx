@@ -7,61 +7,30 @@ import localforage from "localforage";
 
 async function gerarSugestaoClaude(notas, textoAtual) {
   const urlApi = window.location.origin + '/analisar-openai';
-  
   const response = await fetch(urlApi, { 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Resposta do servidor:", errorText);
-    throw new Error(`Erro: ${response.status}`);
-  }
-
+  if (!response.ok) throw new Error(`Erro: ${response.status}`);
   return await response.json();
 }
 
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
 const KEY_FINAL_TITLE = "entrelinhaspsi_v1_final_title";
 
-function sanitizeFilename(name) {
-  return (name || "texto")
-    .replace(/[\\/:*?"<>|]/g, "")
-    .trim()
-    .slice(0, 80) || "texto";
-}
-
 export default function App() {
   const [iaCarregando, setIaCarregando] = useState(false);
   const [iaEstaEscrevendo, setIaEstaEscrevendo] = useState(false);
   const [acabouDeGerarIA, setAcabouDeGerarIA] = useState(false);
-
   const [notas, setNotas] = useState("");
   const [modoEdicaoNotas, setModoEdicaoNotas] = useState(false);
   const [finalTitle, setFinalTitle] = useState("Novo texto");
   const [finalText, setFinalText] = useState("");
   const [hydrated, setHydrated] = useState(false);
-
   const fileInputRef = useRef(null);
 
-  const podeMostrarBalao =
-    notas.trim().length > 0 &&
-    !iaCarregando &&
-    !iaEstaEscrevendo;
-
-  const digitarTexto = async (texto) => {
-    setIaEstaEscrevendo(true);
-    const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
-    const textoCompleto = separador + texto;
-
-    for (let i = 0; i < textoCompleto.length; i++) {
-      await new Promise(r => setTimeout(r, 10));
-      setFinalText(prev => prev + textoCompleto[i]);
-    }
-    setIaEstaEscrevendo(false);
-  };
+  const podeMostrarBalao = notas.trim().length > 0 && !iaCarregando && !iaEstaEscrevendo;
 
   const limparNotas = () => {
     if (window.confirm("Deseja apagar todas as notas?")) {
@@ -72,83 +41,58 @@ export default function App() {
 
   const copiarTexto = () => {
     if (!finalText) return;
-    navigator.clipboard.writeText(finalText).then(() => {
-      alert("Texto copiado com sucesso!");
-    }).catch(err => {
-      console.error('Erro ao copiar: ', err);
-    });
+    navigator.clipboard.writeText(finalText).then(() => alert("Texto copiado!"));
+  };
+
+  const digitarTexto = async (texto) => {
+    setIaEstaEscrevendo(true);
+    const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
+    const textoCompleto = separador + texto;
+    for (let i = 0; i < textoCompleto.length; i++) {
+      await new Promise(r => setTimeout(r, 10));
+      setFinalText(prev => prev + textoCompleto[i]);
+    }
+    setIaEstaEscrevendo(false);
   };
 
   const gerarSugestaoSomada = async () => {
     if (iaCarregando || !notas.trim()) return;
-
     setIaCarregando(true);
-    setAcabouDeGerarIA(false);
-
-    const processarResposta = async (promessa) => {
-      try {
-        const resultado = await promessa;
-        const texto = typeof resultado === "string" ? resultado : resultado?.texto;
-        if (texto) {
-          await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
-        }
-      } catch (e) {
-        console.error("Erro ao processar resposta");
-      } finally {
-        setIaCarregando(false);
-      }
-    };
-
     try {
-      processarResposta(gerarSugestaoClaude(notas, finalText));
-      setAcabouDeGerarIA(true);
-    } catch (e) {
-      console.error(e);
-      setIaCarregando(false);
-    }
+      const resultado = await gerarSugestaoClaude(notas, finalText);
+      const texto = typeof resultado === "string" ? resultado : resultado?.texto;
+      if (texto) await digitarTexto(`\n\nSegue uma sugestão:\n\n${texto}`);
+    } catch (e) { console.error(e); }
+    finally { setIaCarregando(false); }
   };
 
   useEffect(() => {
-    const notasSalvas = localStorage.getItem("notas");
-    if (notasSalvas) setNotas(notasSalvas);
-  }, []);
-
-  useEffect(() => {
-    if (notas !== "") localStorage.setItem("notas", notas);
-  }, [notas]);
-
-  useEffect(() => {
+    const n = localStorage.getItem("notas"); if (n) setNotas(n);
     (async () => {
-      const savedFinal = await localforage.getItem(KEY_FINAL_TEXT);
-      const savedTitle = await localforage.getItem(KEY_FINAL_TITLE);
-      if (savedFinal && !savedFinal.startsWith("⚠️")) setFinalText(savedFinal);
-      if (savedTitle) setFinalTitle(savedTitle);
+      const st = await localforage.getItem(KEY_FINAL_TEXT);
+      const tt = await localforage.getItem(KEY_FINAL_TITLE);
+      if (st) setFinalText(st); if (tt) setFinalTitle(tt);
       setHydrated(true);
     })();
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localforage.setItem(KEY_FINAL_TEXT, finalText);
-    localforage.setItem(KEY_FINAL_TITLE, finalTitle);
-  }, [finalText, finalTitle, hydrated]);
+    if (notas !== "") localStorage.setItem("notas", notas);
+    if (hydrated) {
+      localforage.setItem(KEY_FINAL_TEXT, finalText);
+      localforage.setItem(KEY_FINAL_TITLE, finalTitle);
+    }
+  }, [notas, finalText, finalTitle, hydrated]);
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    setNotas(result.value.replace(/\n{3,}/g, "\n\n").trim());
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const res = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    setNotas(res.value.trim());
   };
 
   const exportarDocx = async () => {
-    const doc = new Document({
-      sections: [{
-        children: finalText.split("\n").map(l => new Paragraph({ children: [new TextRun(l)] })),
-      }],
-    });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, sanitizeFilename(finalTitle) + ".docx");
+    const doc = new Document({ sections: [{ children: finalText.split("\n").map(l => new Paragraph({ children: [new TextRun(l)] })) }] });
+    saveAs(await Packer.toBlob(doc), (finalTitle || "texto") + ".docx");
   };
 
   return (
@@ -157,64 +101,38 @@ export default function App() {
         <div className="logo">AoLado Psi</div>
         <div className="save">✓ Salvo</div>
       </div>
-
       <div className="main">
         <div className="column">
           <div className="column-header">
             <span>NOTAS</span>
             <div className="actions">
-              <input type="file" accept=".docx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
+              <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
               <button onClick={() => fileInputRef.current.click()}>Abrir notas</button>
               <button onClick={limparNotas} style={{ color: "#d93025" }}>Limpar</button> 
-              <button onClick={() => setModoEdicaoNotas(p => !p)} className={modoEdicaoNotas ? "ativo" : ""}>
+              <button onClick={() => setModoEdicaoNotas(!modoEdicaoNotas)} className={modoEdicaoNotas ? "ativo" : ""}>
                 {modoEdicaoNotas ? "Concluir" : "Editar"}
               </button>
             </div>
           </div>
-          <textarea
-            className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`}
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            placeholder="Suas notas…"
-            readOnly={!modoEdicaoNotas}
-          />
+          <textarea className={`editor ${!modoEdicaoNotas ? "readonly" : ""}`} value={notas} onChange={(e) => setNotas(e.target.value)} readOnly={!modoEdicaoNotas} />
         </div>
-
         <div className="column">
           <div className="column-header">
             <span>TEXTO</span>
             <div className="actions">
               <button onClick={copiarTexto} style={{ fontWeight: "bold", color: "#1a73e8" }}>Copiar Texto</button>
               <button onClick={exportarDocx}>Exportar .docx</button>
-              <button onClick={() => { setFinalText(""); setAcabouDeGerarIA(false); }}>Limpar tudo</button>
-              <button onClick={() => { setFinalTitle("novo texto"); setFinalText(""); setAcabouDeGerarIA(false); }}>Novo Texto</button>
+              <button onClick={() => setFinalText("")}>Limpar tudo</button>
             </div>
           </div>
-
           <div className="titulo-wrapper">
             <span className="label-titulo">Título:</span>
-            <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} placeholder="Digite o título…" />
+            <input className="titulo-texto" value={finalTitle} onChange={(e) => setFinalTitle(e.target.value)} />
           </div>
-
-          <div className="area-texto">
-            {podeMostrarBalao && (
-              <div className="balao-ia" onClick={gerarSugestaoSomada}>
-                💡 Sugerir análise baseada nas notas
-              </div>
-            )}
-
-            {iaCarregando && (
-              <div className="balao-ia carregando">
-                ...escrevendo texto...
-              </div>
-            )}
-
-            <textarea
-              className="editor"
-              value={finalText}
-              onChange={(e) => { setFinalText(e.target.value); setAcabouDeGerarIA(false); }}
-              placeholder="A análise aparecerá aqui ou você pode digitar livremente..."
-            />
+          <div className={`area-texto ${(podeMostrarBalao || iaCarregando) ? "ia-ativa" : ""}`}>
+            {podeMostrarBalao && <div className="balao-ia" onClick={gerarSugestaoSomada}>💡 Sugerir análise baseada nas notas</div>}
+            {iaCarregando && <div className="balao-ia carregando">...escrevendo texto...</div>}
+            <textarea className="editor" value={finalText} onChange={(e) => setFinalText(e.target.value)} placeholder="A análise aparecerá aqui..." />
           </div>
         </div>
       </div>
