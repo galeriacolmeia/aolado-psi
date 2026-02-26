@@ -1,29 +1,63 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
-    }
 
-    if (url.pathname.includes("analisar-openai")) {
+    // Rota que o seu App.jsx chama
+    if (url.pathname === "/analisar-openai" && request.method === "POST") {
       try {
-        const body = await request.json();
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        const { notas, textoAtual } = await request.json();
+
+        // Chamada para a API do Claude (Anthropic)
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
-          headers: { "Authorization": `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+          headers: {
+            "x-api-key": env.CLAUDE_API_KEY, // Verifique se este nome está no painel do Cloudflare
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+          },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: `Analise estas notas de psicanálise: ${body.notas} | Texto atual: ${body.textoAtual}` }],
-          }),
+            model: "claude-3-5-sonnet-20240620",
+            max_tokens: 1500,
+            messages: [
+              {
+                role: "user",
+                content: `Atue como um assistente de escrita intelectual para psicólogos.
+                
+                REFERÊNCIAS: ${notas}
+                TEXTO ATUAL: ${textoAtual}
+                
+                Com base nas referências fornecidas, gere uma sugestão de continuação para este texto de aula ou palestra. 
+                Escreva de forma fluida e profissional. Vá direto ao texto, sem comentários iniciais.`
+              }
+            ]
+          })
         });
-        const data = await res.json();
-        return new Response(JSON.stringify({ texto: data.choices[0].message.content }), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+
+        const data = await response.json();
+
+        if (data.error) {
+          return new Response(JSON.stringify({ texto: "Erro na API: " + data.error.message }), { 
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        // O Claude entrega o texto dentro de content[0].text
+        const sugestao = data.content[0].text;
+
+        return new Response(JSON.stringify({ texto: sugestao }), {
+          headers: { "Content-Type": "application/json" }
         });
+
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
+        return new Response(JSON.stringify({ texto: "Erro no servidor: " + e.message }), { 
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     }
+
+    // Se não for a rota da API, o Cloudflare serve os arquivos estáticos (o seu App React)
     return env.ASSETS.fetch(request);
   }
 };

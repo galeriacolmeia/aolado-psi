@@ -4,15 +4,20 @@ import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import localforage from "localforage";
 
-async function gerarSugestaoClaude(notas, textoAtual) {
-  const urlApi = window.location.origin + '/analisar-openai';
+// Função de chamada para a API (que agora deve estar apontando para o Claude no seu backend)
+async function gerarSugestaoAssistente(notas, textoAtual) {
+  const urlApi = window.location.origin + '/analisar-openai'; // Mantendo a rota ou ajustando conforme seu Worker
   const response = await fetch(urlApi, { 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notas: notas, textoAtual: textoAtual })
   });
+  
   if (!response.ok) throw new Error(`Erro: ${response.status}`);
-  return await response.json();
+  
+  const dados = await response.json();
+  // O ajuste aqui é garantir que pegamos o campo correto da resposta
+  return dados.texto || dados.content?.[0]?.text || dados; 
 }
 
 const KEY_FINAL_TEXT = "entrelinhaspsi_v1_final_text";
@@ -28,6 +33,7 @@ export default function App() {
   const [hydrated, setHydrated] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Gatilho do balão: aparece se houver conteúdo mínimo em um dos lados
   const podeMostrarBalao = (notas.trim().length > 10 || finalText.trim().length > 20) && !assistenteCarregando && !assistenteEscrevendo;
 
   const limparNotas = () => {
@@ -47,6 +53,7 @@ export default function App() {
     const separador = finalText.length > 0 ? "\n\n---\n\n" : "";
     const textoParaAdicionar = separador + texto;
     
+    // Efeito de digitação fluida
     for (let i = 0; i < textoParaAdicionar.length; i++) {
       await new Promise(r => setTimeout(r, 10));
       setFinalText(prev => prev + textoParaAdicionar[i]);
@@ -54,16 +61,19 @@ export default function App() {
     setAssistenteEscrevendo(false);
   };
 
-  const gerarSugestaoSomada = async () => {
+  const dispararSugestao = async () => {
     setAssistenteCarregando(true);
     try {
-      const resultado = await gerarSugestaoClaude(notas, finalText);
-      const texto = typeof resultado === "string" ? resultado : resultado?.texto;
-      if (texto) await digitarTexto(`Sugestão para expandir o conteúdo:\n\n${texto}`);
-    } catch (e) { console.error(e); }
+      const resultado = await gerarSugestaoAssistente(notas, finalText);
+      if (resultado) await digitarTexto(`Sugestão para expandir o conteúdo:\n\n${resultado}`);
+    } catch (e) { 
+      console.error(e);
+      alert("Houve um problema ao gerar a sugestão. Verifique a conexão.");
+    }
     finally { setAssistenteCarregando(false); }
   };
 
+  // Persistência de dados
   useEffect(() => {
     const n = localStorage.getItem("notas"); if (n) setNotas(n);
     (async () => {
@@ -105,6 +115,7 @@ export default function App() {
       </div>
 
       <div className="main">
+        {/* Coluna da Esquerda: Insumos intelectuais */}
         <div className="column">
           <div className="column-header">
             <span>INSIGHTS / REFERÊNCIAS</span>
@@ -126,6 +137,7 @@ export default function App() {
           />
         </div>
 
+        {/* Coluna da Direita: Construção do texto final */}
         <div className="column">
           <div className="column-header">
             <span>TEXTO FINAL</span>
@@ -141,7 +153,7 @@ export default function App() {
           </div>
           <div className={`area-texto ${podeMostrarBalao || assistenteCarregando ? "ia-ativa" : ""}`}>
             {podeMostrarBalao && (
-              <div className="balao-ia" onClick={gerarSugestaoSomada}>
+              <div className="balao-ia" onClick={dispararSugestao}>
                 💡 Sugerir continuação ou análise
               </div>
             )}
