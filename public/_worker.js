@@ -10,40 +10,52 @@ export default {
 
     if (new URL(request.url).pathname === "/analisar-openai") {
       try {
-        // TESTE DE CHAVE: Se a chave for lida como vazia, enviamos um erro claro
+        // 1. Verificação da Chave
         const apiKey = env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-          return new Response(JSON.stringify({ texto: "Erro: Chave ANTHROPIC_API_KEY não encontrada no Cloudflare." }), { status: 500, headers: corsHeaders });
+          throw new Error("VARIÁVEL_AUSENTE: O Cloudflare não entregou a chave ao Worker.");
         }
 
-        const { notas, textoAtual } = await request.json();
-
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
+        const body = await request.json();
+        
+        // 2. Chamada para Anthropic
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            "x-api-key": apiKey.trim(), // .trim() remove espaços invisíveis
+            "x-api-key": apiKey.trim(),
             "anthropic-version": "2023-06-01",
             "content-type": "application/json"
           },
           body: JSON.stringify({
             model: "claude-3-5-sonnet-20240620",
             max_tokens: 1024,
-            messages: [{ role: "user", content: `Notas: ${notas}\nTexto: ${textoAtual}` }]
+            messages: [{
+              role: "user",
+              content: `Notas: ${body.notas || "Sem notas"}\nTexto: ${body.textoAtual || "Sem texto"}`
+            }]
           })
         });
 
-        const data = await res.json();
-        
-        if (data.error) {
-          return new Response(JSON.stringify({ texto: "Erro na Anthropic: " + data.error.message }), { status: 500, headers: corsHeaders });
+        const data = await response.json();
+
+        // 3. Verificação de Erro da Anthropic (Saldo, Modelo, etc)
+        if (!response.ok) {
+          throw new Error(`ANTHROPIC_ERRO_${response.status}: ${JSON.stringify(data.error)}`);
         }
 
-        return new Response(JSON.stringify({ texto: data.content[0].text }), { headers: corsHeaders });
+        return new Response(JSON.stringify({ texto: data.content[0].text }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
 
       } catch (e) {
-        return new Response(JSON.stringify({ texto: "Erro no Worker: " + e.message }), { status: 500, headers: corsHeaders });
+        // Este retorno vai aparecer no seu console do navegador
+        return new Response(JSON.stringify({ texto: "DEBUG: " + e.message }), { 
+          status: 500, 
+          headers: corsHeaders 
+        });
       }
     }
+
     return env.ASSETS.fetch(request);
   }
 };
