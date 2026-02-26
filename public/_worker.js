@@ -27,7 +27,7 @@ export default {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-3-5-sonnet-20240620",
 max_tokens: 1024,
             messages: [{
               role: "user",
