@@ -15,7 +15,8 @@ export default {
         const { notas, textoAtual } = await request.json();
 
         // O segredo está nesta URL (/v1/messages) e nos headers
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        
+	const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "x-api-key": env.ANTHROPIC_API_KEY.trim(),
@@ -23,16 +24,19 @@ export default {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-           model: "claude-sonnet-4-6",
+           model: "claude-haiku-4-5-20251001",
             max_tokens: 4096,
-            messages: [
+           
+ messages: [
              { 
     role: "user", 
-    content: `Escreva um texto completo para uma aula ou palestra. 
-    Use estas notas: ${notas}
-    E este texto base: ${textoAtual}
-    
-    IMPORTANTE: O seu texto deve ser finalizado completamente. Não pare antes de concluir a última frase e o raciocínio final.` 
+        content: `Você é um assistente acadêmico especializado em psicanálise. 
+        Objetivo: Escrever ou expandir um texto de aula/palestra.
+        
+        NOTAS: ${notas}
+        TEXTO ATUAL: ${textoAtual}
+        
+        INSTRUÇÃO: Use as NOTAS para guiar o conteúdo. Se já houver um TEXTO 	ATUAL, continue a escrita de forma fluida a partir dele, sem repetir o 	que já foi dito. Mantenha o rigor clínico.` 
   }
             ]
           })

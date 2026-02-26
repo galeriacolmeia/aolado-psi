@@ -109,7 +109,7 @@ export default function App() {
       <div className="topbar">
         <div className="logo-container">
           <div className="logo">AoLado Psi</div>
-          <div className="subtitle">Transformando referências em conhecimento.</div>
+          <div className="subtitle">Ferramenta de escrita assistida para psicanalistas.</div>
         </div>
         <div className="save"><span>●</span> Alterações salvas automaticamente</div>
       </div>
