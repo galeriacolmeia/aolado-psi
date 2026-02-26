@@ -28,7 +28,7 @@ export default {
           },
           body: JSON.stringify({
             model: "claude-3-opus-latest",
-max_tokens: 1024,,
+max_tokens: 1024,
             messages: [{
               role: "user",
               content: `Notas: ${body.notas || "Sem notas"}\nTexto: ${body.textoAtual || "Sem texto"}`
