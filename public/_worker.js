@@ -11,7 +11,7 @@ export default {
         const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            "x-api-key": env.CLAUDE_API_KEY, // Verifique se este nome está no painel do Cloudflare
+           "x-api-key": env.ANTHROPIC_API_KEY, // Alterado para coincidir com o seu painel
             "anthropic-version": "2023-06-01",
             "content-type": "application/json"
           },
