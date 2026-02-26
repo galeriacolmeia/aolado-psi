@@ -24,9 +24,16 @@ export default {
           },
           body: JSON.stringify({
            model: "claude-sonnet-4-6",
-            max_tokens: 1024,
+            max_tokens: 4096,
             messages: [
-              { role: "user", content: `Notas: ${notas}\n\nTexto: ${textoAtual}` }
+             { 
+    role: "user", 
+    content: `Escreva um texto completo para uma aula ou palestra. 
+    Use estas notas: ${notas}
+    E este texto base: ${textoAtual}
+    
+    IMPORTANTE: O seu texto deve ser finalizado completamente. Não pare antes de concluir a última frase e o raciocínio final.` 
+  }
             ]
           })
         });
