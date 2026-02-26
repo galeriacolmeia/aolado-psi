@@ -27,8 +27,8 @@ export default {
             "content-type": "application/json"
           },
           body: JSON.stringify({
-            model: "claude-3-5-sonnet-20240620",
-max_tokens: 1024,
+           model: "claude-3-opus-20240229",
+             max_tokens: 1024,
             messages: [{
               role: "user",
               content: `Notas: ${body.notas || "Sem notas"}\nTexto: ${body.textoAtual || "Sem texto"}`
